@@ -28,6 +28,7 @@ export class HorizontalTimelineView {
 	private zoomSliderEl: HTMLInputElement | null = null;
 	private tooltipEl: HTMLElement | null = null;
 	private isInitialRender: boolean = true;
+	private wasDaysRowCollapsed: boolean | null = null;
 
 	// Dragging & Momentum Physics state
 	private isDragging: boolean = false;
@@ -312,9 +313,23 @@ export class HorizontalTimelineView {
 	}
 
 	private renderRuler(trackEl: HTMLElement) {
-		const rulerEl = trackEl.createDiv({ cls: "timeline-ruler" });
+		const isCollapsed = this.pixelsPerDay < 30;
+		const prevCollapsed = this.wasDaysRowCollapsed;
+		this.wasDaysRowCollapsed = isCollapsed;
+
+		const rulerEl = trackEl.createDiv({
+			cls: `timeline-ruler ${prevCollapsed ?? isCollapsed ? "is-days-hidden" : ""}`,
+		});
 		const monthsRow = rulerEl.createDiv({ cls: "timeline-ruler-months" });
-		const daysRow = rulerEl.createDiv({ cls: "timeline-ruler-days" });
+		const daysRow = rulerEl.createDiv({
+			cls: `timeline-ruler-days ${prevCollapsed ?? isCollapsed ? "is-collapsed" : ""}`,
+		});
+		if (prevCollapsed !== null && prevCollapsed !== isCollapsed) {
+			requestAnimationFrame(() => {
+				rulerEl.toggleClass("is-days-hidden", isCollapsed);
+				daysRow.toggleClass("is-collapsed", isCollapsed);
+			});
+		}
 
 		const dayMs = 86400000;
 		const monthNamesFull = [
@@ -378,25 +393,18 @@ export class HorizontalTimelineView {
 				currentMonthDaysCount++;
 			}
 
-			// Render day / week tick only when zoom level provides enough room
-			if (this.pixelsPerDay >= 18) {
+			// Render day / week tick only when zoom level provides enough room (same 30px/day threshold as labels)
+			if (this.pixelsPerDay >= 30) {
 				const dayEl = daysRow.createDiv({
 					cls: `timeline-day-tick ${dayOfWeek === 0 || dayOfWeek === 6 ? "is-weekend" : ""}`,
 				});
 				dayEl.style.left = `${i * this.pixelsPerDay}px`;
 				dayEl.style.width = `${this.pixelsPerDay}px`;
 
-				if (this.pixelsPerDay >= 22) {
-					dayEl.createDiv({ text: String(dayOfMonth), cls: "day-number" });
-				}
+				dayEl.createDiv({ text: String(dayOfMonth), cls: "day-number" });
 				if (this.pixelsPerDay >= 46) {
 					dayEl.createDiv({ text: weekdayNames[dayOfWeek], cls: "day-name" });
 				}
-			} else if (this.pixelsPerDay >= 5 && dayOfMonth === 1) {
-				// Show month 1st tick when zoomed out
-				const monthTick = daysRow.createDiv({ cls: "timeline-month-start-tick" });
-				monthTick.style.left = `${i * this.pixelsPerDay}px`;
-				monthTick.createSpan({ text: monthLetters[month], cls: "month-letter" });
 			}
 
 			// Grid lines
