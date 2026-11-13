@@ -672,6 +672,35 @@
 	margin-top: 4px;
 	margin-bottom: 4px;
 	border: 1px solid var(--background-modifier-border);
+	cursor: zoom-in;
+}
+
+/* ---------------- IMAGE LIGHTBOX POPUP ---------------- */
+.timeline-image-lightbox {
+	position: fixed;
+	inset: 0;
+	z-index: 10000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(0, 0, 0, 0.55);
+	backdrop-filter: blur(4px);
+	animation: tooltipFadeIn 0.12s ease-out;
+}
+
+.timeline-image-lightbox.is-hiding {
+	animation: tooltipFadeOut 0.12s ease-in forwards;
+	pointer-events: none;
+}
+
+.timeline-lightbox-img {
+	height: 75vh;
+	width: auto;
+	max-width: 90vw;
+	object-fit: contain;
+	border-radius: 8px;
+	border: 1px solid var(--background-modifier-border);
+	box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
 }
 
 .tooltip-desc {

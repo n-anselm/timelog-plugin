@@ -30,6 +30,9 @@ export class HorizontalTimelineView {
 	private tooltipEl: HTMLElement | null = null;
 	private tooltipHideTimer: number | null = null;
 	private tooltipFadeTimer: number | null = null;
+	private lightboxEl: HTMLElement | null = null;
+	private lightboxFadeTimer: number | null = null;
+	private onWindowKeyDown: ((e: KeyboardEvent) => void) | null = null;
 	private zoomRafId: number | null = null;
 	private pendingZoom: { newPx: number; cursorScreenX: number; targetDay: number } | null = null;
 	private renderedDaysStart: number = -1;
@@ -837,9 +840,31 @@ export class HorizontalTimelineView {
 			this.cancelHideTooltip();
 		};
 		this.tooltipEl.onmouseleave = () => {
-			this.scheduleHideTooltip();
+			if (!this.isLightboxVisible()) {
+				this.scheduleHideTooltip();
+			}
 		};
 		document.body.appendChild(this.tooltipEl);
+
+		if (this.lightboxEl) {
+			this.lightboxEl.remove();
+		}
+		this.lightboxEl = document.createElement("div");
+		this.lightboxEl.className = "timeline-image-lightbox";
+		this.lightboxEl.style.display = "none";
+		document.body.appendChild(this.lightboxEl);
+
+		if (this.onWindowKeyDown) {
+			window.removeEventListener("keydown", this.onWindowKeyDown, true);
+		}
+		this.onWindowKeyDown = (e: KeyboardEvent) => {
+			if (e.key === "Escape" && this.isLightboxVisible()) {
+				e.preventDefault();
+				e.stopPropagation();
+				this.hideImageLightbox();
+			}
+		};
+		window.addEventListener("keydown", this.onWindowKeyDown, true);
 	}
 
 	private formatDateForDisplay(dateStr: string): string {
@@ -982,6 +1007,10 @@ export class HorizontalTimelineView {
 				attr: { src: ev.imageUrl, alt: ev.title },
 			});
 			imgEl.onload = () => this.positionTooltip(mouseEvent);
+			imgEl.onmouseenter = () => {
+				this.cancelHideTooltip();
+				this.showImageLightbox(ev.imageUrl!, ev.title);
+			};
 		}
 
 		if (ev.description) {
@@ -1048,6 +1077,81 @@ export class HorizontalTimelineView {
 
 		this.tooltipEl.style.left = `${Math.max(10, left)}px`;
 		this.tooltipEl.style.top = `${Math.max(10, top)}px`;
+	}
+
+	private isLightboxVisible(): boolean {
+		return !!this.lightboxEl && this.lightboxEl.style.display !== "none";
+	}
+
+	private showImageLightbox(imageUrl: string, alt: string) {
+		if (!this.lightboxEl) return;
+		if (this.lightboxFadeTimer !== null) {
+			window.clearTimeout(this.lightboxFadeTimer);
+			this.lightboxFadeTimer = null;
+		}
+
+		this.lightboxEl.empty();
+		this.lightboxEl.removeClass("is-hiding");
+
+		const img = this.lightboxEl.createEl("img", {
+			cls: "timeline-lightbox-img",
+			attr: { src: imageUrl, alt },
+		});
+
+		let hasEnteredImage = false;
+		img.onmouseenter = () => {
+			hasEnteredImage = true;
+			this.cancelHideTooltip();
+		};
+		img.onmouseleave = () => {
+			this.hideImageLightbox();
+		};
+
+		this.lightboxEl.onmousemove = (e: MouseEvent) => {
+			const rect = img.getBoundingClientRect();
+			const inside =
+				e.clientX >= rect.left &&
+				e.clientX <= rect.right &&
+				e.clientY >= rect.top &&
+				e.clientY <= rect.bottom;
+			if (inside) {
+				hasEnteredImage = true;
+			} else if (hasEnteredImage) {
+				this.hideImageLightbox();
+			} else if (this.tooltipEl) {
+				// Also close if the cursor left the thumbnail without moving into the lightbox image
+				const tipRect = this.tooltipEl.getBoundingClientRect();
+				const insideTip =
+					e.clientX >= tipRect.left &&
+					e.clientX <= tipRect.right &&
+					e.clientY >= tipRect.top &&
+					e.clientY <= tipRect.bottom;
+				if (!insideTip) {
+					this.hideImageLightbox();
+				}
+			}
+		};
+
+		this.lightboxEl.onclick = () => {
+			this.hideImageLightbox();
+		};
+
+		this.lightboxEl.style.display = "flex";
+	}
+
+	private hideImageLightbox() {
+		if (!this.lightboxEl || this.lightboxEl.style.display === "none") return;
+		if (this.lightboxFadeTimer !== null) return;
+
+		this.lightboxEl.addClass("is-hiding");
+		this.lightboxFadeTimer = window.setTimeout(() => {
+			this.lightboxFadeTimer = null;
+			if (this.lightboxEl) {
+				this.lightboxEl.removeClass("is-hiding");
+				this.lightboxEl.style.display = "none";
+				this.lightboxEl.empty();
+			}
+		}, 120);
 	}
 
 	private cancelHideTooltip() {
@@ -1337,6 +1441,14 @@ export class HorizontalTimelineView {
 
 	public destroy() {
 		this.cancelHideTooltip();
+		if (this.lightboxFadeTimer !== null) {
+			window.clearTimeout(this.lightboxFadeTimer);
+			this.lightboxFadeTimer = null;
+		}
+		if (this.onWindowKeyDown) {
+			window.removeEventListener("keydown", this.onWindowKeyDown, true);
+			this.onWindowKeyDown = null;
+		}
 		if (this.onWindowMouseUp) {
 			window.removeEventListener("mouseup", this.onWindowMouseUp);
 			this.onWindowMouseUp = null;
@@ -1351,6 +1463,9 @@ export class HorizontalTimelineView {
 		}
 		if (this.tooltipEl && this.tooltipEl.parentNode) {
 			this.tooltipEl.parentNode.removeChild(this.tooltipEl);
+		}
+		if (this.lightboxEl && this.lightboxEl.parentNode) {
+			this.lightboxEl.parentNode.removeChild(this.lightboxEl);
 		}
 	}
 }
