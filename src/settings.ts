@@ -113,6 +113,20 @@ export class TimelineSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Vertical label height")
+			.setDesc("Maximum height in pixels for vertical event labels before text truncates.")
+			.addSlider((slider) =>
+				slider
+					.setLimits(60, 360, 10)
+					.setValue(this.plugin.settings.verticalLabelMaxHeight || 120)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.verticalLabelMaxHeight = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
 			.setName("Show today marker")
 			.setDesc("Highlight the current date with a vertical indicator line and badge.")
 			.addToggle((toggle) =>
@@ -144,6 +158,18 @@ export class TimelineSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.showGrid)
 					.onChange(async (value) => {
 						this.plugin.settings.showGrid = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Show day ticks")
+			.setDesc("Show vertical day tick marks along the central timeline axis when zoomed in.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showDayTicks)
+					.onChange(async (value) => {
+						this.plugin.settings.showDayTicks = value;
 						await this.plugin.saveSettings();
 					})
 			);

@@ -34,8 +34,10 @@ export interface TimelineSettings {
 	todayMarkerColor: string;
 	zoomPixelsPerDay: number; // e.g. 1 to 140
 	labelMode: "auto" | "vertical" | "hidden" | "horizontal";
+	verticalLabelMaxHeight: number;
 	showToday: boolean;
 	showGrid: boolean;
+	showDayTicks: boolean;
 	autoScrollToToday: boolean;
 	hiddenCategoryIds: string[];
 }
@@ -94,8 +96,10 @@ export const DEFAULT_SETTINGS: TimelineSettings = {
 	todayMarkerColor: "#ff3333",
 	zoomPixelsPerDay: 40,
 	labelMode: "auto",
+	verticalLabelMaxHeight: 120,
 	showToday: true,
 	showGrid: true,
+	showDayTicks: true,
 	autoScrollToToday: true,
 	hiddenCategoryIds: [],
 };

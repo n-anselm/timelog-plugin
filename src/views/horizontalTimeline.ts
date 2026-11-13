@@ -451,10 +451,10 @@ export class HorizontalTimelineView {
 		stageEl.createDiv({ cls: "timeline-central-axis" });
 
 		// Day tick marks on the axis (shown when pixelsPerDay >= 30, same threshold as auto text labels)
-		if (this.pixelsPerDay >= 30) {
+		if (this.settings.showDayTicks && this.pixelsPerDay >= 30) {
 			for (let i = 0; i < this.totalDays; i++) {
 				const tick = stageEl.createDiv({ cls: "timeline-day-tick-mark" });
-				tick.style.left = `${Math.round(i * this.pixelsPerDay + this.pixelsPerDay / 2)}px`;
+				tick.style.left = `${Math.round(i * this.pixelsPerDay)}px`;
 				// Taller ticks once labels go horizontal (65+ px/day) so events are easier to align to days
 				if (this.pixelsPerDay >= 65) tick.style.height = "24px";
 			}
@@ -665,6 +665,9 @@ export class HorizontalTimelineView {
 
 				label.setText(ev.title);
 				label.style.borderLeftColor = ev.color;
+				if (effectiveLabelMode === "vertical") {
+					label.style.maxHeight = `${this.settings.verticalLabelMaxHeight || 120}px`;
+				}
 			}
 
 			// CLICK TO OPEN NOTE
