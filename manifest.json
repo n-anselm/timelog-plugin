@@ -3,8 +3,8 @@
   "name": "Timeline",
   "version": "1.0.0",
   "minAppVersion": "1.0.0",
-  "description": "Interactive horizontal timeline with single-line tracking, multi-day spans, category colors, and adaptive labels.",
-  "author": "Antigravity",
+  "description": "Interactive horizontal timeline with single-line tracking, multi-day spans, category colors, image previews, and adaptive labels.",
+  "author": "Nat",
   "authorUrl": "https://nanselm.com",
   "isDesktopOnly": false
 }
