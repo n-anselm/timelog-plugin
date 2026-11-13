@@ -858,10 +858,14 @@ export class HorizontalTimelineView {
 			window.removeEventListener("keydown", this.onWindowKeyDown, true);
 		}
 		this.onWindowKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "Escape" && this.isLightboxVisible()) {
-				e.preventDefault();
-				e.stopPropagation();
-				this.hideImageLightbox();
+			if (e.key === "Escape") {
+				if (this.isLightboxVisible()) {
+					e.preventDefault();
+					e.stopPropagation();
+					this.hideImageLightbox();
+				} else if (this.tooltipEl && this.tooltipEl.style.display !== "none") {
+					this.hideTooltip();
+				}
 			}
 		};
 		window.addEventListener("keydown", this.onWindowKeyDown, true);
@@ -1152,6 +1156,13 @@ export class HorizontalTimelineView {
 				this.lightboxEl.empty();
 			}
 		}, 120);
+
+		if (
+			!this.tooltipEl?.matches(":hover") &&
+			!this.containerEl.querySelector(".timeline-event-item:hover, .timeline-cluster-dot:hover")
+		) {
+			this.scheduleHideTooltip();
+		}
 	}
 
 	private cancelHideTooltip() {
@@ -1207,6 +1218,7 @@ export class HorizontalTimelineView {
 			) {
 				return;
 			}
+			this.hideTooltip();
 			this.isDragging = true;
 			scrollWrapper.addClass("is-dragging");
 			this.startX = e.pageX - scrollWrapper.offsetLeft;
