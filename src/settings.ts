@@ -96,6 +96,32 @@ export class TimelineSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Zoom sensitivity")
+			.setDesc("Multiplier for mouse wheel and trackpad zoom speed (lower = finer control, higher = faster zoom).")
+			.addSlider((slider) =>
+				slider
+					.setLimits(0.3, 2.5, 0.1)
+					.setValue(this.plugin.settings.zoomSensitivity ?? 1.0)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.zoomSensitivity = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Zoom acceleration")
+			.setDesc("Scale zoom speed with wheel velocity so slow notches are precise and fast spins cover ground quickly.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.zoomAcceleration ?? true)
+					.onChange(async (value) => {
+						this.plugin.settings.zoomAcceleration = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
 			.setName("Label display mode")
 			.setDesc("Auto switches from hidden (zoomed out) to vertical (medium) to horizontal (zoomed in).")
 			.addDropdown((dropdown) =>

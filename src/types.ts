@@ -33,6 +33,8 @@ export interface TimelineSettings {
 	defaultColor: string;
 	todayMarkerColor: string;
 	zoomPixelsPerDay: number; // e.g. 1 to 140
+	zoomSensitivity: number; // e.g. 0.3 to 2.5
+	zoomAcceleration: boolean;
 	labelMode: "auto" | "vertical" | "hidden" | "horizontal";
 	verticalLabelMaxHeight: number;
 	showToday: boolean;
@@ -82,6 +84,8 @@ export const DEFAULT_SETTINGS: TimelineSettings = {
 	defaultColor: "var(--interactive-accent)",
 	todayMarkerColor: "#ff3333",
 	zoomPixelsPerDay: 40,
+	zoomSensitivity: 1.0,
+	zoomAcceleration: true,
 	labelMode: "auto",
 	verticalLabelMaxHeight: 120,
 	showToday: true,

@@ -46,6 +46,8 @@ export class HorizontalTimelineView {
 	private lastMouseTime: number = 0;
 	private panVelocity: number = 0;
 	private onWindowMouseUp: (() => void) | null = null;
+	private lastWheelZoomTime: number = 0;
+	private wheelZoomBurst: number = 0;
 
 	// Active filter state
 	private activeHiddenCategoryIds: Set<string>;
@@ -1192,22 +1194,42 @@ export class HorizontalTimelineView {
 					? this.pendingZoom.targetDay
 					: (scrollWrapper.scrollLeft + cursorScreenX) / this.pixelsPerDay;
 
-				// Handle delta smoothly while guaranteeing at least ±1px zoom step to prevent getting trapped at zoom=1
+				// Handle delta smoothly with configurable sensitivity and velocity acceleration
 				const delta = e.deltaY;
-				let newZoom: number;
+				if (delta === 0) return;
 
+				const now = performance.now();
+				const dt = now - this.lastWheelZoomTime;
+				this.lastWheelZoomTime = now;
+
+				if (this.settings.zoomAcceleration ?? true) {
+					if (dt < 140) {
+						const speedBoost = Math.min(1.2, (140 - dt) / 90);
+						this.wheelZoomBurst = Math.min(3.2, this.wheelZoomBurst * 0.75 + speedBoost);
+					} else {
+						this.wheelZoomBurst = 0;
+					}
+				} else {
+					this.wheelZoomBurst = 1.0;
+				}
+
+				const sensitivity = this.settings.zoomSensitivity ?? 1.0;
+				// Base step for a single deliberate notch is gentle (~5%); fast spinning ramps up to ~20%
+				const accelMultiplier = (this.settings.zoomAcceleration ?? true)
+					? 0.55 + this.wheelZoomBurst * 0.75
+					: 1.0;
+				const rawIntensity = Math.min(1.5, Math.abs(delta) / 100);
+				const stepFraction = Math.max(0.015, Math.min(0.35, 0.085 * rawIntensity * sensitivity * accelMultiplier));
+
+				let newZoom: number;
 				if (delta < 0) {
 					// Zooming in
-					const factor = Math.abs(delta) < 25 ? 1 - delta * 0.015 : 1.18;
-					const calculated = Math.round(basePx * factor);
+					const calculated = Math.round(basePx * (1 + stepFraction));
 					newZoom = Math.max(basePx + 1, calculated);
-				} else if (delta > 0) {
-					// Zooming out
-					const factor = Math.abs(delta) < 25 ? 1 - delta * 0.015 : 0.84;
-					const calculated = Math.round(basePx * factor);
-					newZoom = Math.min(basePx - 1, calculated);
 				} else {
-					return;
+					// Zooming out
+					const calculated = Math.round(basePx / (1 + stepFraction));
+					newZoom = Math.min(basePx - 1, calculated);
 				}
 
 				newZoom = Math.max(1, Math.min(140, newZoom));
