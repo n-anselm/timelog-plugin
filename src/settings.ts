@@ -1,6 +1,5 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import { TimelinePlugin } from "./main";
-import { COLOR_PALETTE } from "./types";
 
 export class TimelineSettingTab extends PluginSettingTab {
 	private plugin: TimelinePlugin;

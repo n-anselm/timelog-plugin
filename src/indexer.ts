@@ -224,9 +224,18 @@ export class TimelineIndexer {
 			return null;
 		}
 
+		const timestamp = Date.UTC(year, month - 1, day);
+		const check = new Date(timestamp);
+		if (
+			check.getUTCFullYear() !== year ||
+			check.getUTCMonth() !== month - 1 ||
+			check.getUTCDate() !== day
+		) {
+			return null;
+		}
+
 		const pad = (n: number) => (n < 10 ? "0" + n : String(n));
 		const dateStr = `${year}-${pad(month)}-${pad(day)}`;
-		const timestamp = Date.UTC(year, month - 1, day);
 
 		return { dateStr, timestamp };
 	}

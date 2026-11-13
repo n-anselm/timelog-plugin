@@ -315,23 +315,6 @@
 	z-index: 1;
 }
 
-.timeline-month-start-tick {
-	position: absolute;
-	top: 0;
-	height: 100%;
-	border-left: 1px solid var(--background-modifier-border);
-	display: flex;
-	align-items: center;
-	padding-left: 2px;
-	box-sizing: border-box;
-}
-
-.month-letter {
-	font-size: 9px;
-	color: var(--text-muted);
-	font-weight: bold;
-}
-
 /* Grid lines across stage */
 .timeline-grid-line {
 	position: absolute;
@@ -341,10 +324,6 @@
 	background-color: var(--background-modifier-border-focus, rgba(255,255,255,0.03));
 	pointer-events: none;
 	z-index: 1;
-}
-
-.timeline-grid-line.is-week-start {
-	background-color: var(--background-modifier-border);
 }
 
 .timeline-grid-line.is-month-start {
@@ -677,18 +656,6 @@
 	border-radius: 10px;
 	border: 1px solid;
 	margin-bottom: 6px;
-}
-
-.tooltip-tags {
-	display: flex;
-	gap: 4px;
-	flex-wrap: wrap;
-	margin-bottom: 6px;
-}
-
-.tooltip-tag {
-	font-size: 11px;
-	color: var(--text-accent);
 }
 
 .tooltip-image {

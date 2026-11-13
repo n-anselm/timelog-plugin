@@ -45,6 +45,7 @@ export class HorizontalTimelineView {
 	private lastMouseX: number = 0;
 	private lastMouseTime: number = 0;
 	private panVelocity: number = 0;
+	private onWindowMouseUp: (() => void) | null = null;
 
 	// Active filter state
 	private activeHiddenCategoryIds: Set<string>;
@@ -96,9 +97,11 @@ export class HorizontalTimelineView {
 
 		if (this.isInitialRender) {
 			this.isInitialRender = false;
-			setTimeout(() => {
-				this.scrollToToday(false);
-			}, 50);
+			if (this.settings.autoScrollToToday) {
+				setTimeout(() => {
+					this.scrollToToday(false);
+				}, 50);
+			}
 		}
 	}
 
@@ -507,6 +510,7 @@ export class HorizontalTimelineView {
 
 		if (offsetDays >= 0 && offsetDays <= this.totalDays) {
 			const todayMarker = trackEl.createDiv({ cls: "timeline-today-marker" });
+			todayMarker.style.setProperty("--today-color", this.settings.todayMarkerColor || "#ff3333");
 			const x = offsetDays * this.pixelsPerDay + this.pixelsPerDay / 2;
 			todayMarker.style.left = `${x}px`;
 
@@ -1088,7 +1092,10 @@ export class HorizontalTimelineView {
 			this.panVelocity = 0;
 		};
 
-		window.onmouseup = () => {
+		if (this.onWindowMouseUp) {
+			window.removeEventListener("mouseup", this.onWindowMouseUp);
+		}
+		this.onWindowMouseUp = () => {
 			if (this.isDragging) {
 				this.isDragging = false;
 				scrollWrapper.removeClass("is-dragging");
@@ -1112,6 +1119,7 @@ export class HorizontalTimelineView {
 				}
 			}
 		};
+		window.addEventListener("mouseup", this.onWindowMouseUp);
 
 		scrollWrapper.onmousemove = (e) => {
 			if (!this.isDragging) return;
@@ -1226,6 +1234,10 @@ export class HorizontalTimelineView {
 
 	public destroy() {
 		this.cancelHideTooltip();
+		if (this.onWindowMouseUp) {
+			window.removeEventListener("mouseup", this.onWindowMouseUp);
+			this.onWindowMouseUp = null;
+		}
 		if (this.zoomRafId !== null) {
 			cancelAnimationFrame(this.zoomRafId);
 			this.zoomRafId = null;

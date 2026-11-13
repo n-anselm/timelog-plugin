@@ -1,4 +1,4 @@
-import { App, MarkdownPostProcessorContext } from "obsidian";
+import { MarkdownPostProcessorContext, MarkdownRenderChild } from "obsidian";
 import { TimelinePlugin } from "./main";
 import { HorizontalTimelineView } from "./views/horizontalTimeline";
 import { TimelineIndexer } from "./indexer";
@@ -28,10 +28,11 @@ export function registerTimelineCodeBlock(plugin: TimelinePlugin) {
 					configOverride.folder = val.replace(/^["']|["']$/g, "");
 				} else if (key === "zoom") {
 					const num = parseInt(val, 10);
-					if (!isNaN(num)) configOverride.zoomPixelsPerDay = num;
+					if (!isNaN(num)) configOverride.zoomPixelsPerDay = Math.max(1, Math.min(140, num));
 				} else if (key === "labels" || key === "labelmode") {
-					if (["auto", "vertical", "hidden", "horizontal"].includes(val)) {
-						configOverride.labelMode = val as any;
+					const mode = val.toLowerCase();
+					if (["auto", "vertical", "hidden", "horizontal"].includes(mode)) {
+						configOverride.labelMode = mode as any;
 					}
 				}
 			}
@@ -51,6 +52,10 @@ export function registerTimelineCodeBlock(plugin: TimelinePlugin) {
 
 			const events = indexer.getEvents(mergedSettings);
 			view.updateData(events, mergedSettings);
+
+			const child = new MarkdownRenderChild(wrapper);
+			child.onunload = () => view.destroy();
+			ctx.addChild(child);
 		}
 	);
 }

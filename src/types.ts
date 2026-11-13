@@ -73,19 +73,6 @@ export const DEFAULT_CATEGORIES: CategoryConfig[] = [
 	},
 ];
 
-export const COLOR_PALETTE = [
-	"var(--interactive-accent)", // Obsidian theme accent
-	"#6c849d", // Blue
-	"#5db0c0", // Cyan
-	"#779d6c", // Green
-	"#9d906c", // Yellow / Gold
-	"#c05db3", // Magenta
-	"#876c9d", // Purple
-	"#ff3333", // Red
-	"#d97706", // Amber
-	"#8b5cf6", // Indigo
-];
-
 export const DEFAULT_SETTINGS: TimelineSettings = {
 	folder: "Calendar",
 	includeSubfolders: true,
