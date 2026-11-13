@@ -39,6 +39,7 @@ export interface TimelineSettings {
 	zoomAcceleration: boolean;
 	labelMode: "auto" | "vertical" | "hidden" | "horizontal";
 	verticalLabelMaxHeight: number;
+	useAliasAsLabel: boolean;
 	showToday: boolean;
 	showGrid: boolean;
 	showDayTicks: boolean;
@@ -117,6 +118,7 @@ export const DEFAULT_SETTINGS: TimelineSettings = {
 	zoomAcceleration: true,
 	labelMode: "auto",
 	verticalLabelMaxHeight: 120,
+	useAliasAsLabel: false,
 	showToday: true,
 	showGrid: true,
 	showDayTicks: true,

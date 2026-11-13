@@ -165,9 +165,21 @@ export class TimelineIndexer {
 		// Image preview URL
 		const imageUrl = this.resolveImageUrl(frontmatter?.image, file.path);
 
+		// Determine event title (alias if enabled and present, else frontmatter title or basename)
+		let title = frontmatter?.title || file.basename;
+		if (settings.useAliasAsLabel && frontmatter) {
+			const rawAlias = frontmatter.aliases ?? frontmatter.alias;
+			if (Array.isArray(rawAlias) && rawAlias.length > 0 && rawAlias[0] != null) {
+				const first = String(rawAlias[0]).trim();
+				if (first) title = first;
+			} else if (typeof rawAlias === "string" && rawAlias.trim()) {
+				title = rawAlias.split(",")[0].trim();
+			}
+		}
+
 		return {
 			file,
-			title: frontmatter?.title || file.basename,
+			title,
 			startDate: parsedStart.dateStr,
 			endDate: isRange && parsedEnd ? parsedEnd.dateStr : null,
 			startTimestamp,

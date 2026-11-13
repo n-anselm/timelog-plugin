@@ -162,6 +162,18 @@ export class TimelineSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Use note alias as label")
+			.setDesc("When enabled, uses the first alias from the note's frontmatter (aliases / alias) as the event label instead of the note name.")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.useAliasAsLabel ?? false)
+					.onChange(async (value) => {
+						this.plugin.settings.useAliasAsLabel = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
 			.setName("Show today marker")
 			.setDesc("Highlight the current date with a vertical indicator line and badge.")
 			.addToggle((toggle) =>
