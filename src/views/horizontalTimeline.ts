@@ -77,6 +77,7 @@ export class HorizontalTimelineView {
 		// Initialize persistent DOM structure once
 		if (!this.toolbarEl || !this.scrollWrapperEl || !this.timelineTrackEl) {
 			this.containerEl.empty();
+			this.containerEl.tabIndex = 0;
 			this.toolbarEl = this.containerEl.createDiv({ cls: "timeline-toolbar" });
 			this.scrollWrapperEl = this.containerEl.createDiv({ cls: "timeline-scroll-wrapper" });
 			this.timelineTrackEl = this.scrollWrapperEl.createDiv({ cls: "timeline-track" });
@@ -1073,6 +1074,7 @@ export class HorizontalTimelineView {
 	private setupInteractionHandlers(scrollWrapper: HTMLElement) {
 		// Drag to Pan with "Heavy" Momentum Physics
 		scrollWrapper.onmousedown = (e) => {
+			this.containerEl.focus({ preventScroll: true });
 			if (this.animFrameId) {
 				cancelAnimationFrame(this.animFrameId);
 				this.animFrameId = null;
@@ -1208,6 +1210,69 @@ export class HorizontalTimelineView {
 			},
 			{ passive: false }
 		);
+
+		this.containerEl.addEventListener("keydown", (e: KeyboardEvent) => {
+			if (
+				e.target instanceof HTMLInputElement ||
+				e.target instanceof HTMLSelectElement ||
+				e.target instanceof HTMLTextAreaElement ||
+				e.ctrlKey ||
+				e.metaKey ||
+				e.altKey
+			) {
+				return;
+			}
+			if (e.key === "Home") {
+				e.preventDefault();
+				this.scrollToToday(true);
+			} else if (e.key === "ArrowLeft") {
+				e.preventDefault();
+				if (e.shiftKey) {
+					this.panByDays(-30);
+				} else {
+					const stepDays = Math.max(1, Math.round((scrollWrapper.clientWidth * 0.15) / this.pixelsPerDay));
+					this.panByDays(-stepDays);
+				}
+			} else if (e.key === "ArrowRight") {
+				e.preventDefault();
+				if (e.shiftKey) {
+					this.panByDays(30);
+				} else {
+					const stepDays = Math.max(1, Math.round((scrollWrapper.clientWidth * 0.15) / this.pixelsPerDay));
+					this.panByDays(stepDays);
+				}
+			} else if (e.key === "PageUp") {
+				e.preventDefault();
+				this.panByDays(-30);
+			} else if (e.key === "PageDown") {
+				e.preventDefault();
+				this.panByDays(30);
+			} else if (e.key === "+" || e.key === "=") {
+				e.preventDefault();
+				const nextZoom = this.pixelsPerDay < 10 ? this.pixelsPerDay + 2 : this.pixelsPerDay + 8;
+				this.applyZoom(nextZoom);
+			} else if (e.key === "-" || e.key === "_") {
+				e.preventDefault();
+				const nextZoom = this.pixelsPerDay < 10 ? this.pixelsPerDay - 1 : this.pixelsPerDay - 6;
+				this.applyZoom(nextZoom);
+			} else if (e.key === "0") {
+				e.preventDefault();
+				this.applyZoom(40);
+			} else if (e.key === "l" || e.key === "L") {
+				e.preventDefault();
+				const order: ("auto" | "vertical" | "horizontal" | "hidden")[] = [
+					"auto",
+					"vertical",
+					"horizontal",
+					"hidden",
+				];
+				const idx = order.indexOf(this.settings.labelMode);
+				this.settings.labelMode = order[(idx + 1) % order.length];
+				this.onSettingsChange();
+				this.updateToolbar();
+				this.renderTrack();
+			}
+		});
 	}
 
 	public scrollToToday(smooth: boolean = true) {
