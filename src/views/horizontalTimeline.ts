@@ -1,4 +1,4 @@
-import { App, Menu, TFile } from "obsidian";
+import { App, Menu, TFile, setIcon } from "obsidian";
 import { TimelineEvent, TimelineSettings } from "../types";
 
 interface TimelineCluster {
@@ -149,29 +149,35 @@ export class HorizontalTimelineView {
 		todayBtn.onclick = () => this.scrollToToday(true);
 
 		const prevYearBtn = leftGroup.createEl("button", {
-			text: "◀◀ Year",
-			cls: "timeline-btn",
+			cls: "timeline-btn timeline-btn-nav",
 			title: "Jump back 1 year",
 		});
+		setIcon(prevYearBtn.createSpan({ cls: "timeline-btn-lucide" }), "chevrons-left");
+		prevYearBtn.createSpan({ text: "Year" });
 		prevYearBtn.onclick = () => this.panByDays(-365);
 
 		const prevMonthBtn = leftGroup.createEl("button", {
-			text: "◀ Month",
-			cls: "timeline-btn",
+			cls: "timeline-btn timeline-btn-nav",
+			title: "Jump back 1 month",
 		});
+		setIcon(prevMonthBtn.createSpan({ cls: "timeline-btn-lucide" }), "chevron-left");
+		prevMonthBtn.createSpan({ text: "Month" });
 		prevMonthBtn.onclick = () => this.panByDays(-30);
 
 		const nextMonthBtn = leftGroup.createEl("button", {
-			text: "Month ▶",
-			cls: "timeline-btn",
+			cls: "timeline-btn timeline-btn-nav",
+			title: "Jump forward 1 month",
 		});
+		nextMonthBtn.createSpan({ text: "Month" });
+		setIcon(nextMonthBtn.createSpan({ cls: "timeline-btn-lucide" }), "chevron-right");
 		nextMonthBtn.onclick = () => this.panByDays(30);
 
 		const nextYearBtn = leftGroup.createEl("button", {
-			text: "Year ▶▶",
-			cls: "timeline-btn",
+			cls: "timeline-btn timeline-btn-nav",
 			title: "Jump forward 1 year",
 		});
+		nextYearBtn.createSpan({ text: "Year" });
+		setIcon(nextYearBtn.createSpan({ cls: "timeline-btn-lucide" }), "chevrons-right");
 		nextYearBtn.onclick = () => this.panByDays(365);
 
 		// Middle: Category Filter Pills
@@ -467,16 +473,16 @@ export class HorizontalTimelineView {
 		}
 
 		// Multi-day bar thickness scales down smoothly as user zooms out
-		let barHeightPx = 18;
+		let barHeightPx = 22;
 		let showTextInBar = false;
 		if (this.pixelsPerDay >= 55) {
-			barHeightPx = 18;
+			barHeightPx = 22;
 			showTextInBar = true;
 		} else if (this.pixelsPerDay >= 30) {
-			barHeightPx = 8;
+			barHeightPx = 12;
 			showTextInBar = false;
 		} else {
-			barHeightPx = 4;
+			barHeightPx = 6;
 			showTextInBar = false;
 		}
 

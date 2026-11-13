@@ -37,11 +37,28 @@
 	color: var(--text-normal);
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 4px;
-	padding: 4px 8px;
-	font-size: 11px;
+	padding: 5px 10px;
+	font-size: 13px;
 	cursor: pointer;
 	transition: all 0.15s ease;
 	white-space: nowrap;
+}
+
+.timeline-btn-nav {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.timeline-btn-lucide {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.timeline-btn-lucide svg.svg-icon {
+	width: 15px;
+	height: 15px;
 }
 
 .timeline-btn:hover {
@@ -61,8 +78,8 @@
 }
 
 .timeline-btn-icon {
-	width: 26px;
-	height: 26px;
+	width: 28px;
+	height: 28px;
 	padding: 0;
 	display: flex;
 	align-items: center;
@@ -75,8 +92,8 @@
 	color: var(--text-normal);
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 4px;
-	padding: 4px 8px;
-	font-size: 11px;
+	padding: 5px 10px;
+	font-size: 13px;
 	cursor: pointer;
 }
 
@@ -96,12 +113,12 @@
 .timeline-category-pill {
 	display: flex;
 	align-items: center;
-	gap: 5px;
-	padding: 3px 8px;
+	gap: 6px;
+	padding: 4px 10px;
 	border-radius: 12px;
 	background: var(--background-primary);
 	border: 1px solid var(--background-modifier-border);
-	font-size: 11px;
+	font-size: 12.5px;
 	cursor: pointer;
 	transition: all 0.2s ease;
 }
@@ -155,7 +172,7 @@
 	top: 0;
 	left: 0;
 	width: 100%;
-	height: 70px;
+	height: 76px;
 	box-sizing: border-box;
 	background-color: transparent;
 	z-index: 15;
@@ -164,7 +181,7 @@
 
 .timeline-ruler-months {
 	position: relative;
-	height: 26px;
+	height: 28px;
 	background-color: var(--background-secondary);
 	border-bottom: 1px solid var(--background-modifier-border);
 	pointer-events: auto;
@@ -177,13 +194,13 @@
 	border-left: 1px solid var(--background-modifier-border);
 	display: flex;
 	align-items: center;
-	padding-left: 6px;
+	padding-left: 8px;
 	box-sizing: border-box;
 	overflow: hidden;
 }
 
 .timeline-month-label {
-	font-size: 10px;
+	font-size: 11.5px;
 	font-weight: 600;
 	letter-spacing: 0.5px;
 	text-transform: uppercase;
@@ -193,7 +210,7 @@
 
 .timeline-ruler-days {
 	position: relative;
-	height: 44px;
+	height: 48px;
 	background-color: var(--background-secondary);
 	border-bottom: 1px solid var(--background-modifier-border);
 	opacity: 1;
@@ -235,7 +252,7 @@
 	left: auto !important;
 	right: auto !important;
 	display: block !important;
-	font-size: 11px !important;
+	font-size: 13px !important;
 	font-weight: 600 !important;
 	color: var(--text-normal) !important;
 	line-height: 1 !important;
@@ -248,7 +265,7 @@
 .timeline-day-tick .day-name {
 	position: static !important;
 	display: block !important;
-	font-size: 10px !important;
+	font-size: 11px !important;
 	font-weight: 500 !important;
 	color: var(--text-faint) !important;
 	line-height: 1 !important;
@@ -347,14 +364,14 @@
 
 .timeline-today-badge {
 	position: absolute;
-	top: 2px;
+	top: 3px;
 	left: 50%;
 	transform: translateX(-50%);
 	background: var(--today-color, #ff3333);
 	color: #ffffff;
-	font-size: 9px;
+	font-size: 10.5px;
 	font-weight: bold;
-	padding: 1px 6px;
+	padding: 2px 7px;
 	border-radius: 4px;
 	letter-spacing: 0.5px;
 	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
@@ -364,7 +381,7 @@
 .timeline-stage {
 	position: relative;
 	width: 100%;
-	height: calc(100% - 70px);
+	height: calc(100% - 76px);
 	min-height: 360px;
 }
 
@@ -374,7 +391,8 @@
 	top: 50%;
 	left: 0;
 	right: 0;
-	height: 2px;
+	height: 4px;
+	transform: translateY(-50%);
 	background: var(--background-modifier-border-hover, var(--background-modifier-border));
 	box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 	z-index: 2;
@@ -398,11 +416,11 @@
 	position: absolute;
 	top: 50%;
 	left: 0;
-	width: 11px;
-	height: 11px;
+	width: 16px;
+	height: 16px;
 	border-radius: 50%;
 	transform: translate(-50%, -50%);
-	border: 2px solid var(--background-primary);
+	border: 2.5px solid var(--background-primary);
 	box-sizing: border-box;
 	cursor: pointer;
 	pointer-events: auto;
@@ -411,7 +429,7 @@
 }
 
 .timeline-event-dot:hover {
-	transform: translate(-50%, -50%) scale(1.45) !important;
+	transform: translate(-50%, -50%) scale(1.35) !important;
 	box-shadow: 0 0 12px var(--event-color) !important;
 }
 
@@ -426,7 +444,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: flex-start;
-	padding: 0 8px;
+	padding: 0 10px;
 	box-sizing: border-box;
 	cursor: pointer;
 	pointer-events: auto;
@@ -442,8 +460,14 @@
 
 .event-bar-label {
 	color: #ffffff;
-	font-size: 11px;
+	font-size: 12.5px;
 	font-weight: 600;
+	line-height: 1;
+	display: flex;
+	align-items: center;
+	height: 100%;
+	margin: 0;
+	padding: 0;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -455,17 +479,17 @@
 	position: absolute;
 	top: 50%;
 	transform: translate(-50%, -50%);
-	min-width: 20px;
-	height: 20px;
-	padding: 0 5px;
-	border-radius: 10px;
+	min-width: 24px;
+	height: 24px;
+	padding: 0 6px;
+	border-radius: 12px;
 	background: var(--interactive-accent);
 	color: var(--text-on-accent);
 	border: 2px solid var(--background-primary);
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 10px;
+	font-size: 12px;
 	font-weight: 700;
 	cursor: pointer;
 	z-index: 10;
@@ -504,11 +528,12 @@
 	position: absolute;
 	pointer-events: auto;
 	cursor: pointer;
-	font-size: 11px;
+	font-size: 13px;
 	color: var(--text-normal);
 	white-space: nowrap;
 	background: var(--background-secondary);
 	border: 1px solid var(--background-modifier-border);
+	border-left: 4px solid var(--event-color);
 	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 	transition: all 0.15s ease;
 	z-index: 6;
@@ -516,6 +541,7 @@
 
 .timeline-event-label:hover {
 	border-color: var(--interactive-accent);
+	border-left-color: var(--event-color);
 	color: var(--text-accent);
 	box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
 }
@@ -583,21 +609,21 @@
 }
 
 .tooltip-title {
-	font-size: 13px;
+	font-size: 14px;
 	font-weight: 600;
 	color: var(--text-normal);
 	margin-bottom: 4px;
 }
 
 .tooltip-date-row {
-	font-size: 11px;
+	font-size: 12px;
 	color: var(--text-muted);
 	margin-bottom: 3px;
 	font-family: var(--font-monospace);
 }
 
 .tooltip-relative-time {
-	font-size: 11px;
+	font-size: 12px;
 	font-weight: 500;
 	color: var(--text-accent);
 	margin-bottom: 6px;
@@ -605,9 +631,9 @@
 
 .tooltip-category-badge {
 	display: inline-block;
-	font-size: 10px;
+	font-size: 11px;
 	font-weight: 600;
-	padding: 1px 6px;
+	padding: 2px 7px;
 	border-radius: 10px;
 	border: 1px solid;
 	margin-bottom: 6px;
@@ -621,7 +647,7 @@
 }
 
 .tooltip-tag {
-	font-size: 10px;
+	font-size: 11px;
 	color: var(--text-accent);
 }
 
@@ -637,7 +663,7 @@
 }
 
 .tooltip-desc {
-	font-size: 11px;
+	font-size: 12.5px;
 	color: var(--text-muted);
 	border-top: 1px solid var(--background-modifier-border);
 	padding-top: 6px;
@@ -647,7 +673,7 @@
 
 /* Cluster Tooltip */
 .tooltip-cluster-hint {
-	font-size: 10px;
+	font-size: 11.5px;
 	color: var(--interactive-accent);
 	font-style: italic;
 	margin-bottom: 8px;
@@ -665,7 +691,7 @@
 	display: flex;
 	align-items: center;
 	gap: 6px;
-	padding: 3px 6px;
+	padding: 4px 8px;
 	border-radius: 4px;
 	background: var(--background-primary);
 	border: 1px solid var(--background-modifier-border);
@@ -678,14 +704,14 @@
 }
 
 .tooltip-item-dot {
-	width: 7px;
-	height: 7px;
+	width: 8px;
+	height: 8px;
 	border-radius: 50%;
 	flex-shrink: 0;
 }
 
 .tooltip-item-title {
-	font-size: 11px;
+	font-size: 12.5px;
 	font-weight: 500;
 	color: var(--text-normal);
 	flex: 1;
@@ -695,7 +721,7 @@
 }
 
 .tooltip-item-date {
-	font-size: 9px;
+	font-size: 11px;
 	color: var(--text-faint);
 	font-family: var(--font-monospace);
 	flex-shrink: 0;
