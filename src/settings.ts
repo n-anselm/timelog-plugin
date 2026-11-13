@@ -13,8 +13,6 @@ export class TimelineSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl("h2", { text: "Timeline Settings" });
-
 		// SECTION: FOLDER & SCOPE
 		containerEl.createEl("h3", { text: "Folder & Source Filter" });
 

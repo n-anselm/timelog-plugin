@@ -221,7 +221,7 @@
 	opacity: 1;
 	overflow: hidden;
 	pointer-events: auto;
-	transition: opacity 0.2s ease;
+	transition: opacity 0.4s ease;
 }
 
 .timeline-ruler-days.is-collapsed {
