@@ -1,0 +1,25 @@
+{
+  "name": "obsidian-timeline",
+  "version": "1.0.0",
+  "description": "Interactive horizontal timeline plugin for Obsidian notes",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production"
+  },
+  "keywords": [
+    "obsidian",
+    "obsidian-plugin",
+    "timeline",
+    "calendar",
+    "notes"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.28.2",
+    "obsidian": "latest",
+    "typescript": "^5.0.0"
+  }
+}

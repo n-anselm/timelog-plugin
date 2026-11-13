@@ -1,0 +1,10 @@
+{
+  "id": "obsidian-timeline",
+  "name": "Timeline",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "description": "Interactive horizontal timeline with single-line tracking, multi-day spans, category colors, and adaptive labels.",
+  "author": "Antigravity",
+  "authorUrl": "https://nanselm.com",
+  "isDesktopOnly": false
+}
