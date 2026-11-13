@@ -436,11 +436,11 @@ export class HorizontalTimelineView {
 		// The Single Central Continuous Axis Line
 		stageEl.createDiv({ cls: "timeline-central-axis" });
 
-		// Day tick marks on the axis (shown when pixelsPerDay >= 18, same threshold as day ticks in ruler)
-		if (this.pixelsPerDay >= 18) {
+		// Day tick marks on the axis (shown when pixelsPerDay >= 30, same threshold as auto text labels)
+		if (this.pixelsPerDay >= 30) {
 			for (let i = 0; i < this.totalDays; i++) {
 				const tick = stageEl.createDiv({ cls: "timeline-day-tick-mark" });
-				tick.style.left = `${i * this.pixelsPerDay + this.pixelsPerDay / 2}px`;
+				tick.style.left = `${Math.round(i * this.pixelsPerDay + this.pixelsPerDay / 2)}px`;
 				// Taller ticks once labels go horizontal (65+ px/day) so events are easier to align to days
 				if (this.pixelsPerDay >= 65) tick.style.height = "24px";
 			}
@@ -834,6 +834,14 @@ export class HorizontalTimelineView {
 			badge.style.backgroundColor = `${ev.color}33`;
 			badge.style.borderColor = ev.color;
 			badge.style.color = ev.color;
+		}
+
+		if (ev.imageUrl) {
+			const imgEl = this.tooltipEl.createEl("img", {
+				cls: "tooltip-image",
+				attr: { src: ev.imageUrl, alt: ev.title },
+			});
+			imgEl.onload = () => this.positionTooltip(mouseEvent);
 		}
 
 		if (ev.description) {

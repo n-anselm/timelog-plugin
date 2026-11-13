@@ -13,6 +13,7 @@ export interface TimelineEvent {
 	categoryName: string | null;
 	color: string;
 	description: string;
+	imageUrl: string | null;
 }
 
 export interface CategoryConfig {

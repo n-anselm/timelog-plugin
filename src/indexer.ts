@@ -153,6 +153,9 @@ export class TimelineIndexer {
 			description = frontmatter.summary;
 		}
 
+		// Image preview URL
+		const imageUrl = this.resolveImageUrl(frontmatter?.image, file.path);
+
 		return {
 			file,
 			title: frontmatter?.title || file.basename,
@@ -166,7 +169,35 @@ export class TimelineIndexer {
 			categoryName: matchedCategory?.name || null,
 			color,
 			description,
+			imageUrl,
 		};
+	}
+
+	private resolveImageUrl(raw: any, sourcePath: string): string | null {
+		if (!raw) return null;
+		const val = Array.isArray(raw) ? raw[0] : raw;
+		if (typeof val !== "string") return null;
+
+		let link = val.trim();
+		if (!link) return null;
+
+		if (/^(https?:|data:|app:)/i.test(link)) {
+			return link;
+		}
+
+		const wikiMatch = link.match(/^!?\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]$/);
+		const mdMatch = link.match(/^!?\[[^\]]*\]\(([^)]+)\)$/);
+		if (wikiMatch) {
+			link = wikiMatch[1].trim();
+		} else if (mdMatch) {
+			link = mdMatch[1].trim();
+		}
+
+		const target =
+			this.app.metadataCache.getFirstLinkpathDest(link, sourcePath) ||
+			this.app.vault.getFileByPath(link.replace(/^\/+/, ""));
+
+		return target instanceof TFile ? this.app.vault.getResourcePath(target) : null;
 	}
 
 	public parseDate(raw: any): { dateStr: string; timestamp: number } | null {

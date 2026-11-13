@@ -245,8 +245,9 @@
 	top: 50%;
 	width: 1px;
 	height: 18px;
-	transform: translate(-50%, -50%);
-	background-color: var(--text-muted);
+	transform: translateY(-50%);
+	background-color: var(--background-modifier-border-hover, var(--background-modifier-border));
+	opacity: 0.7;
 	pointer-events: none;
 	z-index: 2;
 }
@@ -601,6 +602,17 @@
 .tooltip-tag {
 	font-size: 10px;
 	color: var(--text-accent);
+}
+
+.tooltip-image {
+	display: block;
+	width: 100%;
+	max-height: 140px;
+	object-fit: cover;
+	border-radius: 4px;
+	margin-top: 4px;
+	margin-bottom: 4px;
+	border: 1px solid var(--background-modifier-border);
 }
 
 .tooltip-desc {
