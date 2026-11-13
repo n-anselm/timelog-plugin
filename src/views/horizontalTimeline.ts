@@ -25,10 +25,15 @@ export class HorizontalTimelineView {
 	private toolbarEl: HTMLElement | null = null;
 	private scrollWrapperEl: HTMLElement | null = null;
 	private timelineTrackEl: HTMLElement | null = null;
+	private daysRowEl: HTMLElement | null = null;
 	private zoomSliderEl: HTMLInputElement | null = null;
 	private tooltipEl: HTMLElement | null = null;
 	private tooltipHideTimer: number | null = null;
 	private tooltipFadeTimer: number | null = null;
+	private zoomRafId: number | null = null;
+	private pendingZoom: { newPx: number; cursorScreenX: number; targetDay: number } | null = null;
+	private renderedDaysStart: number = -1;
+	private renderedDaysEnd: number = -1;
 	private isInitialRender: boolean = true;
 	private wasDaysRowCollapsed: boolean | null = null;
 
@@ -290,10 +295,12 @@ export class HorizontalTimelineView {
 		// Keep the target day locked under the cursor
 		const targetScrollLeft = Math.max(0, Math.round(targetDay * clamped - cursorScreenX));
 		this.scrollWrapperEl.scrollLeft = targetScrollLeft;
+		this.renderVisibleRulerDays(true);
 
 		requestAnimationFrame(() => {
 			if (this.scrollWrapperEl) {
 				this.scrollWrapperEl.scrollLeft = targetScrollLeft;
+				this.renderVisibleRulerDays(true);
 			}
 		});
 	}
@@ -332,6 +339,9 @@ export class HorizontalTimelineView {
 		const daysRow = rulerEl.createDiv({
 			cls: `timeline-ruler-days ${prevCollapsed ?? isCollapsed ? "is-collapsed" : ""}`,
 		});
+		this.daysRowEl = daysRow;
+		this.renderedDaysStart = -1;
+		this.renderedDaysEnd = -1;
 		if (prevCollapsed !== null && prevCollapsed !== isCollapsed) {
 			requestAnimationFrame(() => {
 				rulerEl.toggleClass("is-days-hidden", isCollapsed);
@@ -348,8 +358,6 @@ export class HorizontalTimelineView {
 			"Jan", "Feb", "Mar", "Apr", "May", "Jun",
 			"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 		];
-		const monthLetters = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
-		const weekdayNames = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 		let currentMonth = -1;
 		let currentMonthYear = -1;
@@ -384,12 +392,17 @@ export class HorizontalTimelineView {
 			}
 		};
 
+		let firstMondayIndex = -1;
 		for (let i = 0; i < this.totalDays; i++) {
 			const date = new Date(this.minTimestamp + i * dayMs);
 			const month = date.getUTCMonth();
 			const year = date.getUTCFullYear();
 			const dayOfMonth = date.getUTCDate();
 			const dayOfWeek = date.getUTCDay();
+
+			if (firstMondayIndex === -1 && dayOfWeek === 1) {
+				firstMondayIndex = i;
+			}
 
 			if (month !== currentMonth || year !== currentMonthYear) {
 				flushMonth();
@@ -401,33 +414,89 @@ export class HorizontalTimelineView {
 				currentMonthDaysCount++;
 			}
 
-			// Render day / week tick only when zoom level provides enough room (same 30px/day threshold as labels)
-			if (this.pixelsPerDay >= 30) {
-				const dayEl = daysRow.createDiv({
-					cls: `timeline-day-tick ${dayOfWeek === 0 || dayOfWeek === 6 ? "is-weekend" : ""}`,
-				});
-				dayEl.style.left = `${i * this.pixelsPerDay}px`;
-				dayEl.style.width = `${this.pixelsPerDay}px`;
-
-				dayEl.createDiv({ text: String(dayOfMonth), cls: "day-number" });
-				if (this.pixelsPerDay >= 46) {
-					dayEl.createDiv({ text: weekdayNames[dayOfWeek], cls: "day-name" });
-				}
-			}
-
-			// Grid lines
-			if (this.settings.showGrid) {
-				if (dayOfWeek === 1 && this.pixelsPerDay >= 15) {
-					const gridLine = trackEl.createDiv({ cls: "timeline-grid-line is-week-start" });
-					gridLine.style.left = `${i * this.pixelsPerDay}px`;
-				} else if (dayOfMonth === 1 && this.pixelsPerDay < 15) {
-					const gridLine = trackEl.createDiv({ cls: "timeline-grid-line is-month-start" });
-					gridLine.style.left = `${i * this.pixelsPerDay}px`;
-				}
+			// Month-start grid lines when zoomed out (< 15px/day): only ~36 nodes for 3 years
+			if (this.settings.showGrid && this.pixelsPerDay < 15 && dayOfMonth === 1) {
+				const gridLine = trackEl.createDiv({ cls: "timeline-grid-line is-month-start" });
+				gridLine.style.left = `${i * this.pixelsPerDay}px`;
 			}
 		}
 
 		flushMonth();
+
+		// Weekly Monday grid lines (>= 15px/day) via a single CSS repeating background instead of hundreds of DOM nodes
+		if (this.settings.showGrid && this.pixelsPerDay >= 15 && firstMondayIndex >= 0) {
+			const weekGrid = trackEl.createDiv({ cls: "timeline-week-grid-layer" });
+			const weekPx = 7 * this.pixelsPerDay;
+			weekGrid.style.backgroundSize = `${weekPx}px 100%`;
+			weekGrid.style.backgroundPosition = `${firstMondayIndex * this.pixelsPerDay}px 0`;
+		}
+
+		this.renderVisibleRulerDays(true);
+	}
+
+	private renderVisibleRulerDays(force: boolean = false) {
+		if (!this.daysRowEl || !this.scrollWrapperEl) return;
+		if (this.pixelsPerDay < 30) {
+			if (this.renderedDaysStart !== -1) {
+				this.daysRowEl.empty();
+				this.renderedDaysStart = -1;
+				this.renderedDaysEnd = -1;
+			}
+			return;
+		}
+
+		const viewLeft = this.scrollWrapperEl.scrollLeft;
+		const viewWidth = this.scrollWrapperEl.clientWidth || 1200;
+		const bufferDays = 14;
+		const startDay = Math.max(0, Math.floor(viewLeft / this.pixelsPerDay) - bufferDays);
+		const endDay = Math.min(
+			this.totalDays - 1,
+			Math.ceil((viewLeft + viewWidth) / this.pixelsPerDay) + bufferDays
+		);
+
+		if (
+			!force &&
+			this.renderedDaysStart !== -1 &&
+			startDay >= this.renderedDaysStart - 4 &&
+			endDay <= this.renderedDaysEnd + 4
+		) {
+			return;
+		}
+
+		this.renderedDaysStart = startDay;
+		this.renderedDaysEnd = endDay;
+		this.daysRowEl.empty();
+
+		const dayMs = 86400000;
+		const weekdayNames = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+		const frag = document.createDocumentFragment();
+
+		for (let i = startDay; i <= endDay; i++) {
+			const date = new Date(this.minTimestamp + i * dayMs);
+			const dayOfMonth = date.getUTCDate();
+			const dayOfWeek = date.getUTCDay();
+
+			const dayEl = document.createElement("div");
+			dayEl.className = `timeline-day-tick ${dayOfWeek === 0 || dayOfWeek === 6 ? "is-weekend" : ""}`;
+			dayEl.style.left = `${i * this.pixelsPerDay}px`;
+			dayEl.style.width = `${this.pixelsPerDay}px`;
+
+			const numEl = document.createElement("div");
+			numEl.className = "day-number";
+			numEl.textContent = String(dayOfMonth);
+			dayEl.appendChild(numEl);
+
+			if (this.pixelsPerDay >= 46) {
+				const nameEl = document.createElement("div");
+				nameEl.className = "day-name";
+				nameEl.textContent = weekdayNames[dayOfWeek];
+				dayEl.appendChild(nameEl);
+			}
+
+			frag.appendChild(dayEl);
+		}
+
+		this.daysRowEl.appendChild(frag);
 	}
 
 	private renderTodayMarker(trackEl: HTMLElement) {
@@ -453,13 +522,11 @@ export class HorizontalTimelineView {
 		stageEl.createDiv({ cls: "timeline-central-axis" });
 
 		// Day tick marks on the axis (shown when pixelsPerDay >= 30, same threshold as auto text labels)
+		// Rendered as a single repeating-linear-gradient layer instead of thousands of individual DOM nodes
 		if (this.settings.showDayTicks && this.pixelsPerDay >= 30) {
-			for (let i = 0; i < this.totalDays; i++) {
-				const tick = stageEl.createDiv({ cls: "timeline-day-tick-mark" });
-				tick.style.left = `${Math.round(i * this.pixelsPerDay)}px`;
-				// Taller ticks once labels go horizontal (65+ px/day) so events are easier to align to days
-				if (this.pixelsPerDay >= 65) tick.style.height = "24px";
-			}
+			const ticksLayer = stageEl.createDiv({ cls: "timeline-day-ticks-layer" });
+			ticksLayer.style.height = this.pixelsPerDay >= 65 ? "24px" : "18px";
+			ticksLayer.style.backgroundSize = `${this.pixelsPerDay}px 100%`;
 		}
 
 		// Effective label mode
@@ -1065,7 +1132,15 @@ export class HorizontalTimelineView {
 			scrollWrapper.scrollLeft = this.scrollLeft - walk;
 		};
 
-		// MOUSE WHEEL & CURSOR-PINNED ZOOM HANDLING
+		scrollWrapper.addEventListener(
+			"scroll",
+			() => {
+				this.renderVisibleRulerDays(false);
+			},
+			{ passive: true }
+		);
+
+		// MOUSE WHEEL & CURSOR-PINNED ZOOM HANDLING (coalesced to animation frames)
 		scrollWrapper.addEventListener(
 			"wheel",
 			(e: WheelEvent) => {
@@ -1086,8 +1161,10 @@ export class HorizontalTimelineView {
 				// Measure exact position of cursor relative to visible scroll container
 				const rect = scrollWrapper.getBoundingClientRect();
 				const cursorScreenX = e.clientX - rect.left;
-				const cursorTrackX = scrollWrapper.scrollLeft + cursorScreenX;
-				const targetDay = cursorTrackX / this.pixelsPerDay;
+				const basePx = this.pendingZoom ? this.pendingZoom.newPx : this.pixelsPerDay;
+				const targetDay = this.pendingZoom
+					? this.pendingZoom.targetDay
+					: (scrollWrapper.scrollLeft + cursorScreenX) / this.pixelsPerDay;
 
 				// Handle delta smoothly while guaranteeing at least ±1px zoom step to prevent getting trapped at zoom=1
 				const delta = e.deltaY;
@@ -1096,19 +1173,30 @@ export class HorizontalTimelineView {
 				if (delta < 0) {
 					// Zooming in
 					const factor = Math.abs(delta) < 25 ? 1 - delta * 0.015 : 1.18;
-					const calculated = Math.round(this.pixelsPerDay * factor);
-					newZoom = Math.max(this.pixelsPerDay + 1, calculated);
+					const calculated = Math.round(basePx * factor);
+					newZoom = Math.max(basePx + 1, calculated);
 				} else if (delta > 0) {
 					// Zooming out
 					const factor = Math.abs(delta) < 25 ? 1 - delta * 0.015 : 0.84;
-					const calculated = Math.round(this.pixelsPerDay * factor);
-					newZoom = Math.min(this.pixelsPerDay - 1, calculated);
+					const calculated = Math.round(basePx * factor);
+					newZoom = Math.min(basePx - 1, calculated);
 				} else {
 					return;
 				}
 
 				newZoom = Math.max(1, Math.min(140, newZoom));
-				this.applyZoom(newZoom, cursorScreenX, targetDay);
+				this.pendingZoom = { newPx: newZoom, cursorScreenX, targetDay };
+
+				if (this.zoomRafId === null) {
+					this.zoomRafId = requestAnimationFrame(() => {
+						this.zoomRafId = null;
+						if (this.pendingZoom) {
+							const { newPx, cursorScreenX: cx, targetDay: td } = this.pendingZoom;
+							this.pendingZoom = null;
+							this.applyZoom(newPx, cx, td);
+						}
+					});
+				}
 			},
 			{ passive: false }
 		);
@@ -1138,6 +1226,10 @@ export class HorizontalTimelineView {
 
 	public destroy() {
 		this.cancelHideTooltip();
+		if (this.zoomRafId !== null) {
+			cancelAnimationFrame(this.zoomRafId);
+			this.zoomRafId = null;
+		}
 		if (this.animFrameId) {
 			cancelAnimationFrame(this.animFrameId);
 			this.animFrameId = null;

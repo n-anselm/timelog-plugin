@@ -1,4 +1,4 @@
-import { Plugin, WorkspaceLeaf } from "obsidian";
+import { Plugin, WorkspaceLeaf, debounce } from "obsidian";
 import { DEFAULT_SETTINGS, TimelineSettings } from "./types";
 import { TimelineView, VIEW_TYPE_TIMELINE } from "./timelineView";
 import { TimelineSettingTab } from "./settings";
@@ -6,6 +6,9 @@ import { registerTimelineCodeBlock } from "./codeblock";
 
 export class TimelinePlugin extends Plugin {
 	public settings: TimelineSettings = DEFAULT_SETTINGS;
+	private debouncedSaveData = debounce(() => {
+		this.saveData(this.settings);
+	}, 400, true);
 
 	async onload() {
 		await this.loadSettings();
@@ -49,6 +52,10 @@ export class TimelinePlugin extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 		this.refreshOpenViews();
+	}
+
+	public saveSettingsQuiet() {
+		this.debouncedSaveData();
 	}
 
 	private refreshOpenViews() {

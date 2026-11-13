@@ -50,7 +50,7 @@ export class TimelineView extends ItemView {
 			this.app,
 			this.contentEl,
 			this.plugin.settings,
-			() => this.plugin.saveSettings()
+			() => this.plugin.saveSettingsQuiet()
 		);
 
 		this.refresh();
