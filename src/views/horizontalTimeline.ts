@@ -221,6 +221,7 @@ export class HorizontalTimelineView {
 		// Middle: Category Filter Pills
 		const filterGroup = this.toolbarEl.createDiv({ cls: "timeline-toolbar-group timeline-categories-group" });
 		for (const cat of this.settings.categories) {
+			if (!cat.enabled) continue;
 			const isHidden = this.activeHiddenCategoryIds.has(cat.id);
 			const pill = filterGroup.createDiv({
 				cls: `timeline-category-pill ${isHidden ? "is-hidden" : ""}`,
@@ -1386,69 +1387,40 @@ export class HorizontalTimelineView {
 			},
 			{ passive: false }
 		);
+	}
 
-		this.containerEl.addEventListener("keydown", (e: KeyboardEvent) => {
-			if (
-				e.target instanceof HTMLInputElement ||
-				e.target instanceof HTMLSelectElement ||
-				e.target instanceof HTMLTextAreaElement ||
-				e.ctrlKey ||
-				e.metaKey ||
-				e.altKey
-			) {
-				return;
-			}
-			if (e.key === "Home") {
-				e.preventDefault();
-				this.resetToDefaultView(true);
-			} else if (e.key === "ArrowLeft") {
-				e.preventDefault();
-				if (e.shiftKey) {
-					this.panByDays(-30);
-				} else {
-					const stepDays = Math.max(1, Math.round((scrollWrapper.clientWidth * 0.15) / this.pixelsPerDay));
-					this.panByDays(-stepDays);
-				}
-			} else if (e.key === "ArrowRight") {
-				e.preventDefault();
-				if (e.shiftKey) {
-					this.panByDays(30);
-				} else {
-					const stepDays = Math.max(1, Math.round((scrollWrapper.clientWidth * 0.15) / this.pixelsPerDay));
-					this.panByDays(stepDays);
-				}
-			} else if (e.key === "PageUp") {
-				e.preventDefault();
-				this.panByDays(-30);
-			} else if (e.key === "PageDown") {
-				e.preventDefault();
-				this.panByDays(30);
-			} else if (e.key === "+" || e.key === "=") {
-				e.preventDefault();
-				const nextZoom = this.pixelsPerDay < 10 ? this.pixelsPerDay + 2 : this.pixelsPerDay + 8;
-				this.applyZoom(nextZoom);
-			} else if (e.key === "-" || e.key === "_") {
-				e.preventDefault();
-				const nextZoom = this.pixelsPerDay < 10 ? this.pixelsPerDay - 1 : this.pixelsPerDay - 6;
-				this.applyZoom(nextZoom);
-			} else if (e.key === "0" || e.key === "z" || e.key === "Z") {
-				e.preventDefault();
-				this.zoomToFitAll();
-			} else if (e.key === "l" || e.key === "L") {
-				e.preventDefault();
-				const order: ("auto" | "vertical" | "horizontal" | "hidden")[] = [
-					"auto",
-					"vertical",
-					"horizontal",
-					"hidden",
-				];
-				const idx = order.indexOf(this.settings.labelMode);
-				this.settings.labelMode = order[(idx + 1) % order.length];
-				this.onSettingsChange();
-				this.updateToolbar();
-				this.renderTrack();
-			}
-		});
+	public stepZoomIn() {
+		const nextZoom = this.pixelsPerDay < 10 ? this.pixelsPerDay + 2 : this.pixelsPerDay + 8;
+		this.applyZoom(nextZoom);
+	}
+
+	public stepZoomOut() {
+		const nextZoom = this.pixelsPerDay < 10 ? this.pixelsPerDay - 1 : this.pixelsPerDay - 6;
+		this.applyZoom(nextZoom);
+	}
+
+	public panByViewportFraction(fraction: number) {
+		if (!this.scrollWrapperEl) return;
+		const sign = fraction < 0 ? -1 : 1;
+		const stepDays = Math.max(
+			1,
+			Math.round((this.scrollWrapperEl.clientWidth * Math.abs(fraction)) / this.pixelsPerDay)
+		);
+		this.panByDays(sign * stepDays);
+	}
+
+	public cycleLabelMode() {
+		const order: ("auto" | "vertical" | "horizontal" | "hidden")[] = [
+			"auto",
+			"vertical",
+			"horizontal",
+			"hidden",
+		];
+		const idx = order.indexOf(this.settings.labelMode);
+		this.settings.labelMode = order[(idx + 1) % order.length];
+		this.onSettingsChange();
+		this.updateToolbar();
+		this.renderTrack();
 	}
 
 	public zoomToFitAll() {

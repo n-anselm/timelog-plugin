@@ -123,13 +123,22 @@ export class TimelineIndexer {
 
 		// Determine category and color
 		let matchedCategory = null;
+		let matchesDisabledCategory = false;
 		for (const cat of settings.categories) {
-			if (!cat.enabled) continue;
 			const targetTag = cat.tag.replace(/^#/, "").trim().toLowerCase();
 			if (tags.some(t => t.toLowerCase() === targetTag)) {
-				matchedCategory = cat;
-				break;
+				if (cat.enabled) {
+					matchedCategory = cat;
+					break;
+				} else {
+					matchesDisabledCategory = true;
+				}
 			}
+		}
+
+		// If the note matches a disabled category (and no enabled category), exclude it
+		if (!matchedCategory && matchesDisabledCategory) {
+			return null;
 		}
 
 		let color = settings.defaultColor;

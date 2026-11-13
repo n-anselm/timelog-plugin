@@ -209,18 +209,44 @@ export class TimelineSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
+		const defaultColorSetting = new Setting(containerEl)
 			.setName("Default event color")
-			.setDesc("Fallback color for events. Leave as theme accent or pick a custom hex color.")
-			.addText((text) =>
-				text
-					.setPlaceholder("var(--interactive-accent)")
-					.setValue(this.plugin.settings.defaultColor || "var(--interactive-accent)")
-					.onChange(async (value) => {
-						this.plugin.settings.defaultColor = value.trim() || "var(--interactive-accent)";
-						await this.plugin.saveSettings();
-					})
-			);
+			.setDesc("Fallback color for events. Leave as theme accent or pick a custom hex color.");
+
+		const defaultColorCell = defaultColorSetting.controlEl.createDiv({ cls: "category-color-cell" });
+		const defaultSwatch = defaultColorCell.createDiv({ cls: "category-color-swatch" });
+		defaultSwatch.style.backgroundColor =
+			this.plugin.settings.defaultColor || "var(--interactive-accent)";
+		defaultSwatch.title = "Pick default event color";
+
+		const defaultPicker = defaultSwatch.createEl("input", {
+			type: "color",
+			cls: "category-color-picker",
+		});
+		defaultPicker.value = this.resolveHexForPicker(this.plugin.settings.defaultColor);
+
+		const defaultTextInput = defaultColorCell.createEl("input", {
+			type: "text",
+			cls: "category-color-text-input",
+		});
+		defaultTextInput.value = this.plugin.settings.defaultColor || "var(--interactive-accent)";
+		defaultTextInput.placeholder = "var(--interactive-accent)";
+
+		defaultPicker.oninput = async () => {
+			this.plugin.settings.defaultColor = defaultPicker.value;
+			defaultTextInput.value = defaultPicker.value;
+			defaultSwatch.style.backgroundColor = defaultPicker.value;
+			await this.plugin.saveSettings();
+		};
+
+		defaultTextInput.onchange = async () => {
+			const val = defaultTextInput.value.trim() || "var(--interactive-accent)";
+			this.plugin.settings.defaultColor = val;
+			defaultTextInput.value = val;
+			defaultSwatch.style.backgroundColor = val;
+			defaultPicker.value = this.resolveHexForPicker(val);
+			await this.plugin.saveSettings();
+		};
 
 		// SECTION: CATEGORIES & COLOR PALETTES
 		containerEl.createEl("h3", { text: "Categories & Colors" });
@@ -256,7 +282,9 @@ export class TimelineSettingTab extends PluginSettingTab {
 
 		for (let i = 0; i < this.plugin.settings.categories.length; i++) {
 			const cat = this.plugin.settings.categories[i];
-			const row = container.createDiv({ cls: "timeline-category-setting-row" });
+			const row = container.createDiv({
+				cls: `timeline-category-setting-row ${cat.enabled ? "" : "is-disabled"}`,
+			});
 
 			// Enabled toggle
 			const toggle = row.createEl("input", { type: "checkbox" });
@@ -264,16 +292,42 @@ export class TimelineSettingTab extends PluginSettingTab {
 			toggle.title = "Enable / Disable Category";
 			toggle.onchange = async () => {
 				cat.enabled = toggle.checked;
+				row.toggleClass("is-disabled", !cat.enabled);
 				await this.plugin.saveSettings();
 			};
 
-			// Color input
-			const colorInput = row.createEl("input", { type: "text", cls: "category-color-text-input" });
+			// Color swatch / native color picker + text input
+			const colorCell = row.createDiv({ cls: "category-color-cell" });
+			const swatch = colorCell.createDiv({ cls: "category-color-swatch" });
+			swatch.style.backgroundColor = cat.color || "var(--interactive-accent)";
+			swatch.title = "Pick color";
+
+			const colorPicker = swatch.createEl("input", {
+				type: "color",
+				cls: "category-color-picker",
+			});
+			colorPicker.value = this.resolveHexForPicker(cat.color);
+
+			const colorInput = colorCell.createEl("input", {
+				type: "text",
+				cls: "category-color-text-input",
+			});
 			colorInput.value = cat.color;
 			colorInput.placeholder = "var(--interactive-accent) or #hex";
 			colorInput.title = "Category Color (e.g. var(--interactive-accent) or #ff3333)";
+
+			colorPicker.oninput = async () => {
+				cat.color = colorPicker.value;
+				colorInput.value = cat.color;
+				swatch.style.backgroundColor = cat.color;
+				await this.plugin.saveSettings();
+			};
+
 			colorInput.onchange = async () => {
 				cat.color = colorInput.value.trim() || "var(--interactive-accent)";
+				colorInput.value = cat.color;
+				swatch.style.backgroundColor = cat.color;
+				colorPicker.value = this.resolveHexForPicker(cat.color);
 				await this.plugin.saveSettings();
 			};
 
@@ -307,5 +361,35 @@ export class TimelineSettingTab extends PluginSettingTab {
 				this.renderCategorySettings(container);
 			};
 		}
+	}
+
+	private resolveHexForPicker(color: string): string {
+		const trimmed = (color || "").trim();
+		if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) {
+			return trimmed;
+		}
+		if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) {
+			return (
+				"#" +
+				trimmed[1] +
+				trimmed[1] +
+				trimmed[2] +
+				trimmed[2] +
+				trimmed[3] +
+				trimmed[3]
+			);
+		}
+		const probe = document.createElement("div");
+		probe.style.display = "none";
+		probe.style.color = trimmed || "var(--interactive-accent)";
+		document.body.appendChild(probe);
+		const computed = getComputedStyle(probe).color;
+		probe.remove();
+		const m = computed.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+		if (m) {
+			const hex = (n: string) => parseInt(n, 10).toString(16).padStart(2, "0");
+			return `#${hex(m[1])}${hex(m[2])}${hex(m[3])}`;
+		}
+		return "#6c849d";
 	}
 }

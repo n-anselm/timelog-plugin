@@ -84,6 +84,10 @@ export class TimelineView extends ItemView {
 		this.horizontalView.updateData(events, this.plugin.settings);
 	}
 
+	public getHorizontalView(): HorizontalTimelineView | null {
+		return this.horizontalView;
+	}
+
 	async onClose() {
 		if (this.horizontalView) {
 			this.horizontalView.destroy();
