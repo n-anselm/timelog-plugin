@@ -98,6 +98,28 @@
 	cursor: pointer;
 }
 
+.timeline-search-wrapper {
+	display: flex;
+	align-items: center;
+}
+
+.timeline-search-input {
+	background: var(--background-primary);
+	color: var(--text-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	padding: 4px 8px;
+	font-size: 12.5px;
+	width: 145px;
+	transition: border-color 0.15s ease, width 0.15s ease;
+}
+
+.timeline-search-input:focus {
+	border-color: var(--interactive-accent);
+	width: 185px;
+	outline: none;
+}
+
 .timeline-zoom-slider {
 	width: 85px;
 	cursor: pointer;
@@ -165,6 +187,12 @@
 	position: relative;
 	height: 100%;
 	min-height: 420px;
+}
+
+.timeline-track-content {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
 }
 
 /* ---------------- RULER ---------------- */
@@ -388,9 +416,11 @@
 
 /* ---------------- STAGE & THE SINGLE CENTRAL AXIS ---------------- */
 .timeline-stage {
-	position: relative;
-	width: 100%;
-	height: calc(100% - 76px);
+	position: absolute;
+	top: 76px;
+	left: 0;
+	right: 0;
+	bottom: 0;
 	min-height: 360px;
 }
 
@@ -433,13 +463,14 @@
 	box-sizing: border-box;
 	cursor: pointer;
 	pointer-events: auto;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 	transition: transform 0.15s ease, box-shadow 0.15s ease;
 	z-index: 5;
 }
 
 .timeline-event-dot:hover {
 	transform: translate(-50%, -50%) scale(1.35) !important;
-	box-shadow: 0 0 12px var(--event-color) !important;
+	box-shadow: 0 0 12px color-mix(in srgb, var(--event-color) 80%, transparent) !important;
 }
 
 /* Multi-Day Bar directly ON the line */
@@ -457,6 +488,7 @@
 	box-sizing: border-box;
 	cursor: pointer;
 	pointer-events: auto;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 	transition: all 0.2s ease;
 	z-index: 4;
 	border: 1px solid rgba(255, 255, 255, 0.25);
@@ -464,7 +496,7 @@
 
 .timeline-event-bar:hover {
 	filter: brightness(1.2);
-	box-shadow: 0 0 14px var(--event-color) !important;
+	box-shadow: 0 0 14px color-mix(in srgb, var(--event-color) 75%, transparent) !important;
 }
 
 .event-bar-label {
@@ -598,7 +630,6 @@
 	background: var(--background-secondary);
 	border: 1px solid var(--background-modifier-border);
 	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-	backdrop-filter: blur(10px);
 	padding: 10px 14px;
 	border-radius: 6px;
 	max-width: 320px;
@@ -659,7 +690,9 @@
 	font-weight: 600;
 	padding: 2px 7px;
 	border-radius: 10px;
-	border: 1px solid;
+	border: 1px solid var(--badge-color, var(--interactive-accent));
+	color: var(--badge-color, var(--interactive-accent));
+	background-color: color-mix(in srgb, var(--badge-color, var(--interactive-accent)) 20%, transparent);
 	margin-bottom: 6px;
 }
 

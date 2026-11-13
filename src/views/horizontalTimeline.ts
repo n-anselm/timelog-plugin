@@ -25,7 +25,11 @@ export class HorizontalTimelineView {
 	private toolbarEl: HTMLElement | null = null;
 	private scrollWrapperEl: HTMLElement | null = null;
 	private timelineTrackEl: HTMLElement | null = null;
+	private rulerEl: HTMLElement | null = null;
+	private monthsRowEl: HTMLElement | null = null;
 	private daysRowEl: HTMLElement | null = null;
+	private trackContentEl: HTMLElement | null = null;
+	private searchInputEl: HTMLInputElement | null = null;
 	private zoomSliderEl: HTMLInputElement | null = null;
 	private tooltipEl: HTMLElement | null = null;
 	private tooltipHideTimer: number | null = null;
@@ -40,7 +44,7 @@ export class HorizontalTimelineView {
 	private isInitialRender: boolean = true;
 	private lastAppliedViewSpan: string = "";
 	private lastAppliedViewOffset: string = "";
-	private wasDaysRowCollapsed: boolean | null = null;
+	private searchQuery: string = "";
 
 	// Dragging & Momentum Physics state
 	private isDragging: boolean = false;
@@ -87,12 +91,24 @@ export class HorizontalTimelineView {
 		this.containerEl.addClass("obsidian-timeline-wrapper");
 
 		// Initialize persistent DOM structure once
-		if (!this.toolbarEl || !this.scrollWrapperEl || !this.timelineTrackEl) {
+		if (
+			!this.toolbarEl ||
+			!this.scrollWrapperEl ||
+			!this.timelineTrackEl ||
+			!this.rulerEl ||
+			!this.monthsRowEl ||
+			!this.daysRowEl ||
+			!this.trackContentEl
+		) {
 			this.containerEl.empty();
 			this.containerEl.tabIndex = 0;
 			this.toolbarEl = this.containerEl.createDiv({ cls: "timeline-toolbar" });
 			this.scrollWrapperEl = this.containerEl.createDiv({ cls: "timeline-scroll-wrapper" });
 			this.timelineTrackEl = this.scrollWrapperEl.createDiv({ cls: "timeline-track" });
+			this.rulerEl = this.timelineTrackEl.createDiv({ cls: "timeline-ruler" });
+			this.monthsRowEl = this.rulerEl.createDiv({ cls: "timeline-ruler-months" });
+			this.daysRowEl = this.rulerEl.createDiv({ cls: "timeline-ruler-days" });
+			this.trackContentEl = this.timelineTrackEl.createDiv({ cls: "timeline-track-content" });
 
 			this.setupInteractionHandlers(this.scrollWrapperEl);
 			this.setupTooltip();
@@ -134,9 +150,19 @@ export class HorizontalTimelineView {
 	}
 
 	private getFilteredEvents(): TimelineEvent[] {
+		const q = this.searchQuery.trim().toLowerCase();
 		return this.events.filter((e) => {
 			if (e.categoryId && this.activeHiddenCategoryIds.has(e.categoryId)) {
 				return false;
+			}
+			if (q) {
+				const inTitle = e.title.toLowerCase().includes(q);
+				const inDesc = e.description && e.description.toLowerCase().includes(q);
+				const inTags = e.tags.some((t) => t.toLowerCase().includes(q));
+				const inCat = e.categoryName && e.categoryName.toLowerCase().includes(q);
+				if (!inTitle && !inDesc && !inTags && !inCat) {
+					return false;
+				}
 			}
 			return true;
 		});
@@ -245,8 +271,33 @@ export class HorizontalTimelineView {
 			};
 		}
 
-		// Right: Zoom & Label Controls
+		// Right: Search, Zoom & Label Controls
 		const rightGroup = this.toolbarEl.createDiv({ cls: "timeline-toolbar-group" });
+
+		// Quick search input
+		const searchWrapper = rightGroup.createDiv({ cls: "timeline-search-wrapper" });
+		this.searchInputEl = searchWrapper.createEl("input", {
+			type: "search",
+			cls: "timeline-search-input",
+			placeholder: "Filter events… (/)",
+		});
+		this.searchInputEl.value = this.searchQuery;
+		this.searchInputEl.oninput = () => {
+			this.searchQuery = this.searchInputEl?.value || "";
+			this.renderTrack();
+		};
+		this.searchInputEl.onkeydown = (e: KeyboardEvent) => {
+			if (e.key === "Escape") {
+				e.preventDefault();
+				e.stopPropagation();
+				if (this.searchQuery) {
+					this.searchQuery = "";
+					if (this.searchInputEl) this.searchInputEl.value = "";
+					this.renderTrack();
+				}
+				this.containerEl.focus({ preventScroll: true });
+			}
+		};
 
 		// Label mode dropdown
 		const labelModeSelect = rightGroup.createEl("select", { cls: "timeline-select" });
@@ -338,48 +389,38 @@ export class HorizontalTimelineView {
 	}
 
 	private renderTrack() {
-		if (!this.timelineTrackEl || !this.scrollWrapperEl) return;
+		if (!this.timelineTrackEl || !this.trackContentEl || !this.scrollWrapperEl) return;
 
-		this.timelineTrackEl.empty();
+		this.trackContentEl.empty();
 		const minWidth = this.scrollWrapperEl.clientWidth || 900;
 		const trackWidth = Math.max(minWidth, this.totalDays * this.pixelsPerDay);
 		this.timelineTrackEl.style.width = `${trackWidth}px`;
 
 		const filteredEvents = this.getFilteredEvents();
 
-		// 1. Render Ruler (Year / Month / Day hierarchy)
-		this.renderRuler(this.timelineTrackEl);
+		// 1. Render Ruler (Year / Month / Day hierarchy) into persistent rulerEl
+		this.renderRuler(this.trackContentEl);
 
 		// 2. Render Today Indicator
 		if (this.settings.showToday) {
-			this.renderTodayMarker(this.timelineTrackEl);
+			this.renderTodayMarker(this.trackContentEl);
 		}
 
 		// 3. Render Central Line, Events, and Merged Clusters
-		this.renderTimelineLineAndEvents(this.timelineTrackEl, filteredEvents);
+		this.renderTimelineLineAndEvents(this.trackContentEl, filteredEvents);
 	}
 
 	private renderRuler(trackEl: HTMLElement) {
-		const isCollapsed = this.pixelsPerDay < 30;
-		const prevCollapsed = this.wasDaysRowCollapsed;
-		this.wasDaysRowCollapsed = isCollapsed;
+		if (!this.rulerEl || !this.monthsRowEl || !this.daysRowEl) return;
 
-		const rulerEl = trackEl.createDiv({
-			cls: `timeline-ruler ${prevCollapsed ?? isCollapsed ? "is-days-hidden" : ""}`,
-		});
-		const monthsRow = rulerEl.createDiv({ cls: "timeline-ruler-months" });
-		const daysRow = rulerEl.createDiv({
-			cls: `timeline-ruler-days ${prevCollapsed ?? isCollapsed ? "is-collapsed" : ""}`,
-		});
-		this.daysRowEl = daysRow;
+		const isCollapsed = this.pixelsPerDay < 30;
+		this.rulerEl.toggleClass("is-days-hidden", isCollapsed);
+		this.daysRowEl.toggleClass("is-collapsed", isCollapsed);
+
+		const monthsRow = this.monthsRowEl;
+		monthsRow.empty();
 		this.renderedDaysStart = -1;
 		this.renderedDaysEnd = -1;
-		if (prevCollapsed !== null && prevCollapsed !== isCollapsed) {
-			requestAnimationFrame(() => {
-				rulerEl.toggleClass("is-days-hidden", isCollapsed);
-				daysRow.toggleClass("is-collapsed", isCollapsed);
-			});
-		}
 
 		const dayMs = 86400000;
 		const monthNamesFull = [
@@ -485,11 +526,6 @@ export class HorizontalTimelineView {
 	private renderVisibleRulerDays(force: boolean = false) {
 		if (!this.daysRowEl || !this.scrollWrapperEl) return;
 		if (this.pixelsPerDay < 30) {
-			if (this.renderedDaysStart !== -1) {
-				this.daysRowEl.empty();
-				this.renderedDaysStart = -1;
-				this.renderedDaysEnd = -1;
-			}
 			return;
 		}
 
@@ -726,7 +762,6 @@ export class HorizontalTimelineView {
 				const bar = eventEl.createDiv({ cls: "timeline-event-bar" });
 				bar.style.height = `${barHeightPx}px`;
 				bar.style.backgroundColor = ev.color;
-				bar.style.boxShadow = `0 0 6px ${ev.color}55`;
 
 				if (showTextInBar && widthPx > 50 && effectiveLabelMode !== "hidden") {
 					bar.createSpan({ text: ev.title, cls: "event-bar-label" });
@@ -737,7 +772,6 @@ export class HorizontalTimelineView {
 
 				const dot = eventEl.createDiv({ cls: "timeline-event-dot" });
 				dot.style.backgroundColor = ev.color;
-				dot.style.boxShadow = `0 0 8px ${ev.color}99`;
 			}
 
 			// 2. STEM & LABEL IF NOT HIDDEN
@@ -1023,9 +1057,7 @@ export class HorizontalTimelineView {
 				cls: "tooltip-category-badge",
 				text: ev.categoryName,
 			});
-			badge.style.backgroundColor = `${ev.color}33`;
-			badge.style.borderColor = ev.color;
-			badge.style.color = ev.color;
+			badge.style.setProperty("--badge-color", ev.color);
 		}
 
 		if (ev.imageUrl) {
@@ -1439,6 +1471,10 @@ export class HorizontalTimelineView {
 			} else if ((e.key === "l" || e.key === "L") && !hasCustomHotkey("cycle-label-mode")) {
 				e.preventDefault();
 				this.cycleLabelMode();
+			} else if (e.key === "/") {
+				e.preventDefault();
+				this.searchInputEl?.focus();
+				this.searchInputEl?.select();
 			}
 		});
 	}
