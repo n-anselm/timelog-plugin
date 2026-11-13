@@ -80,15 +80,27 @@ export class TimelineSettingTab extends PluginSettingTab {
 		containerEl.createEl("h3", { text: "Display & Appearance" });
 
 		new Setting(containerEl)
-			.setName("Default zoom level")
-			.setDesc("Pixels per day on the horizontal axis ruler (higher = more spread out).")
-			.addSlider((slider) =>
-				slider
-					.setLimits(1, 140, 1)
-					.setValue(this.plugin.settings.zoomPixelsPerDay)
-					.setDynamicTooltip()
+			.setName("Default view zoom (time span)")
+			.setDesc("Visible time span when opening the timeline (e.g. 6 months, 6mo, 5 days, 2 weeks, 1 year).")
+			.addText((text) =>
+				text
+					.setPlaceholder("6 months")
+					.setValue(this.plugin.settings.defaultViewSpan || "6 months")
 					.onChange(async (value) => {
-						this.plugin.settings.zoomPixelsPerDay = value;
+						this.plugin.settings.defaultViewSpan = value.trim() || "6 months";
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Default view offset from today")
+			.setDesc("Shifts the initial view relative to today. 0 centers today; -1 month shifts the view 1 month into the past (moving the today line 1 month to the right); +1 month shifts 1 month into the future.")
+			.addText((text) =>
+				text
+					.setPlaceholder("0")
+					.setValue(this.plugin.settings.defaultViewOffset ?? "0")
+					.onChange(async (value) => {
+						this.plugin.settings.defaultViewOffset = value.trim() || "0";
 						await this.plugin.saveSettings();
 					})
 			);

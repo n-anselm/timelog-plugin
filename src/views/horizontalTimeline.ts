@@ -1,5 +1,5 @@
 import { App, Menu, TFile, setIcon } from "obsidian";
-import { TimelineEvent, TimelineSettings } from "../types";
+import { TimelineEvent, TimelineSettings, parseDurationToDays } from "../types";
 
 interface TimelineCluster {
 	events: TimelineEvent[];
@@ -38,6 +38,8 @@ export class HorizontalTimelineView {
 	private renderedDaysStart: number = -1;
 	private renderedDaysEnd: number = -1;
 	private isInitialRender: boolean = true;
+	private lastAppliedViewSpan: string = "";
+	private lastAppliedViewOffset: string = "";
 	private wasDaysRowCollapsed: boolean | null = null;
 
 	// Dragging & Momentum Physics state
@@ -72,8 +74,13 @@ export class HorizontalTimelineView {
 	public updateData(events: TimelineEvent[], settings: TimelineSettings) {
 		this.events = events;
 		this.settings = settings;
-		this.pixelsPerDay = settings.zoomPixelsPerDay || 40;
 		this.render();
+	}
+
+	private computeDefaultZoomPixelsPerDay(): number {
+		const spanDays = Math.max(1, parseDurationToDays(this.settings.defaultViewSpan, 180));
+		const viewWidth = this.scrollWrapperEl?.clientWidth || this.containerEl.clientWidth || 1200;
+		return Math.max(1, Math.min(140, Math.round(viewWidth / spanDays)));
 	}
 
 	public render() {
@@ -91,21 +98,36 @@ export class HorizontalTimelineView {
 			this.setupTooltip();
 		}
 
-		// Update toolbar buttons, categories, and sliders
-		this.updateToolbar();
-
 		// Calculate bounds
 		const filteredEvents = this.getFilteredEvents();
 		this.calculateBounds(filteredEvents);
 
+		const spanChanged =
+			this.settings.defaultViewSpan !== this.lastAppliedViewSpan ||
+			this.settings.defaultViewOffset !== this.lastAppliedViewOffset;
+
+		if (this.isInitialRender || spanChanged) {
+			this.lastAppliedViewSpan = this.settings.defaultViewSpan;
+			this.lastAppliedViewOffset = this.settings.defaultViewOffset;
+			this.pixelsPerDay = this.computeDefaultZoomPixelsPerDay();
+		}
+
+		// Update toolbar buttons, categories, and sliders
+		this.updateToolbar();
+
 		// Render track contents
 		this.renderTrack();
 
-		if (this.isInitialRender) {
+		if (this.isInitialRender || spanChanged) {
 			this.isInitialRender = false;
 			if (this.settings.autoScrollToToday) {
 				setTimeout(() => {
-					this.scrollToToday(false);
+					this.pixelsPerDay = this.computeDefaultZoomPixelsPerDay();
+					if (this.zoomSliderEl) {
+						this.zoomSliderEl.value = String(this.pixelsPerDay);
+					}
+					this.renderTrack();
+					this.scrollToDefaultView(false);
 				}, 50);
 			}
 		}
@@ -1378,7 +1400,7 @@ export class HorizontalTimelineView {
 			}
 			if (e.key === "Home") {
 				e.preventDefault();
-				this.scrollToToday(true);
+				this.resetToDefaultView(true);
 			} else if (e.key === "ArrowLeft") {
 				e.preventDefault();
 				if (e.shiftKey) {
@@ -1409,9 +1431,9 @@ export class HorizontalTimelineView {
 				e.preventDefault();
 				const nextZoom = this.pixelsPerDay < 10 ? this.pixelsPerDay - 1 : this.pixelsPerDay - 6;
 				this.applyZoom(nextZoom);
-			} else if (e.key === "0") {
+			} else if (e.key === "0" || e.key === "z" || e.key === "Z") {
 				e.preventDefault();
-				this.applyZoom(40);
+				this.zoomToFitAll();
 			} else if (e.key === "l" || e.key === "L") {
 				e.preventDefault();
 				const order: ("auto" | "vertical" | "horizontal" | "hidden")[] = [
@@ -1429,18 +1451,72 @@ export class HorizontalTimelineView {
 		});
 	}
 
-	public scrollToToday(smooth: boolean = true) {
+	public zoomToFitAll() {
+		if (!this.scrollWrapperEl) return;
+		const filtered = this.getFilteredEvents();
+		const viewWidth = this.scrollWrapperEl.clientWidth || 1200;
+		const dayMs = 86400000;
+
+		if (filtered.length > 0) {
+			let minTs = filtered[0].startTimestamp;
+			let maxTs = filtered[0].endTimestamp;
+			for (const ev of filtered) {
+				if (ev.startTimestamp < minTs) minTs = ev.startTimestamp;
+				if (ev.endTimestamp > maxTs) maxTs = ev.endTimestamp;
+			}
+			const spanDays = Math.max(30, (maxTs - minTs) / dayMs + 30);
+			const targetPx = Math.max(1, Math.min(140, Math.floor(viewWidth / spanDays)));
+			const centerDay = ((minTs + maxTs) / 2 - this.minTimestamp) / dayMs;
+
+			this.pixelsPerDay = targetPx;
+			this.settings.zoomPixelsPerDay = targetPx;
+			this.onSettingsChange();
+			if (this.zoomSliderEl) {
+				this.zoomSliderEl.value = String(targetPx);
+			}
+			this.renderTrack();
+
+			const targetScrollLeft = Math.max(0, Math.round(centerDay * targetPx - viewWidth / 2));
+			this.scrollWrapperEl.scrollTo({ left: targetScrollLeft, behavior: "smooth" });
+			this.renderVisibleRulerDays(true);
+		} else {
+			this.applyZoom(1);
+			this.scrollToToday(true);
+		}
+	}
+
+	public resetToDefaultView(smooth: boolean = true) {
+		const targetPx = this.computeDefaultZoomPixelsPerDay();
+		if (targetPx !== this.pixelsPerDay) {
+			this.pixelsPerDay = targetPx;
+			this.settings.zoomPixelsPerDay = targetPx;
+			this.onSettingsChange();
+			if (this.zoomSliderEl) {
+				this.zoomSliderEl.value = String(targetPx);
+			}
+			this.renderTrack();
+		}
+		this.scrollToDefaultView(smooth);
+	}
+
+	public scrollToDefaultView(smooth: boolean = false) {
+		const offsetDays = parseDurationToDays(this.settings.defaultViewOffset, 0);
+		this.scrollToToday(smooth, offsetDays);
+	}
+
+	public scrollToToday(smooth: boolean = true, offsetDaysFromToday: number = 0) {
 		if (!this.scrollWrapperEl) return;
 		const now = new Date();
 		const todayTimestamp = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
 		const dayMs = 86400000;
-		const offsetDays = (todayTimestamp - this.minTimestamp) / dayMs;
+		const offsetDays = (todayTimestamp - this.minTimestamp) / dayMs + offsetDaysFromToday;
 
-		const targetX = offsetDays * this.pixelsPerDay - this.scrollWrapperEl.clientWidth / 2;
+		const targetX = (offsetDays + 0.5) * this.pixelsPerDay - this.scrollWrapperEl.clientWidth / 2;
 		this.scrollWrapperEl.scrollTo({
 			left: Math.max(0, targetX),
 			behavior: smooth ? "smooth" : "auto",
 		});
+		this.renderVisibleRulerDays(true);
 	}
 
 	public panByDays(days: number) {

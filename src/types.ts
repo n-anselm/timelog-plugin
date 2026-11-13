@@ -32,6 +32,8 @@ export interface TimelineSettings {
 	categories: CategoryConfig[];
 	defaultColor: string;
 	todayMarkerColor: string;
+	defaultViewSpan: string; // e.g. "6mo", "5 days", "1 year"
+	defaultViewOffset: string; // e.g. "0", "-1 month", "-3mo"
 	zoomPixelsPerDay: number; // e.g. 1 to 140
 	zoomSensitivity: number; // e.g. 0.3 to 2.5
 	zoomAcceleration: boolean;
@@ -42,6 +44,31 @@ export interface TimelineSettings {
 	showDayTicks: boolean;
 	autoScrollToToday: boolean;
 	hiddenCategoryIds: string[];
+}
+
+export function parseDurationToDays(raw: string | undefined, fallbackDays: number): number {
+	if (!raw) return fallbackDays;
+	const str = raw.trim().toLowerCase();
+	if (!str) return fallbackDays;
+	if (str === "0") return 0;
+
+	const match = str.match(/^([+-]?\d+(?:\.\d+)?)\s*([a-z]*)$/);
+	if (!match) return fallbackDays;
+
+	const value = parseFloat(match[1]);
+	if (isNaN(value)) return fallbackDays;
+
+	const unit = match[2];
+	if (unit === "y" || unit === "yr" || unit === "yrs" || unit === "year" || unit === "years") {
+		return value * 365;
+	}
+	if (unit === "m" || unit === "mo" || unit === "mos" || unit === "month" || unit === "months") {
+		return value * 30;
+	}
+	if (unit === "w" || unit === "wk" || unit === "wks" || unit === "week" || unit === "weeks") {
+		return value * 7;
+	}
+	return value;
 }
 
 export const DEFAULT_CATEGORIES: CategoryConfig[] = [
@@ -83,6 +110,8 @@ export const DEFAULT_SETTINGS: TimelineSettings = {
 	categories: DEFAULT_CATEGORIES,
 	defaultColor: "var(--interactive-accent)",
 	todayMarkerColor: "#ff3333",
+	defaultViewSpan: "6 months",
+	defaultViewOffset: "0",
 	zoomPixelsPerDay: 40,
 	zoomSensitivity: 1.0,
 	zoomAcceleration: true,

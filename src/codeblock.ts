@@ -28,7 +28,13 @@ export function registerTimelineCodeBlock(plugin: TimelinePlugin) {
 					configOverride.folder = val.replace(/^["']|["']$/g, "");
 				} else if (key === "zoom") {
 					const num = parseInt(val, 10);
-					if (!isNaN(num)) configOverride.zoomPixelsPerDay = Math.max(1, Math.min(140, num));
+					if (!isNaN(num) && /^\d+$/.test(val)) {
+						configOverride.zoomPixelsPerDay = Math.max(1, Math.min(140, num));
+					} else {
+						configOverride.defaultViewSpan = val;
+					}
+				} else if (key === "offset") {
+					configOverride.defaultViewOffset = val;
 				} else if (key === "labels" || key === "labelmode") {
 					const mode = val.toLowerCase();
 					if (["auto", "vertical", "hidden", "horizontal"].includes(mode)) {
