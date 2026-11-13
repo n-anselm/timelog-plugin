@@ -27,6 +27,8 @@ export class HorizontalTimelineView {
 	private timelineTrackEl: HTMLElement | null = null;
 	private zoomSliderEl: HTMLInputElement | null = null;
 	private tooltipEl: HTMLElement | null = null;
+	private tooltipHideTimer: number | null = null;
+	private tooltipFadeTimer: number | null = null;
 	private isInitialRender: boolean = true;
 	private wasDaysRowCollapsed: boolean | null = null;
 
@@ -488,17 +490,41 @@ export class HorizontalTimelineView {
 
 		const dayMs = 86400000;
 
-		// CLUSTERING ALGORITHM:
-		// When events are within clusterDistancePx of each other, group them into a Merged Dot!
-		const clusterDistancePx = 22;
-		const clusters: TimelineCluster[] = [];
+		// Count single-day point events per date so same-day events can spread across the day cell
+		const pointCountsByDate = new Map<string, number>();
+		const pointIndexByDate = new Map<string, number>();
+		for (const ev of events) {
+			if (!ev.isRange) {
+				pointCountsByDate.set(ev.startDate, (pointCountsByDate.get(ev.startDate) || 0) + 1);
+			}
+		}
 
+		const eventCenterX = new Map<TimelineEvent, number>();
 		for (const ev of events) {
 			const startOffsetDays = (ev.startTimestamp - this.minTimestamp) / dayMs;
 			const startX = startOffsetDays * this.pixelsPerDay;
-			const centerX = startX + (ev.isRange ? 0 : this.pixelsPerDay / 2);
+			if (ev.isRange) {
+				eventCenterX.set(ev, startX);
+			} else {
+				const count = pointCountsByDate.get(ev.startDate) || 1;
+				const idx = pointIndexByDate.get(ev.startDate) || 0;
+				pointIndexByDate.set(ev.startDate, idx + 1);
+				const fraction = count > 1 ? (idx + 1) / (count + 1) : 0.5;
+				eventCenterX.set(ev, startX + fraction * this.pixelsPerDay);
+			}
+		}
 
-			if (clusters.length > 0) {
+		// CLUSTERING ALGORITHM:
+		// When events are within clusterDistancePx of each other, group them into a Merged Dot!
+		// At >= 30 px/day (when day columns & labels are visible), same-day events split out instead of staying trapped in a cluster.
+		const clusterDistancePx = 22;
+		const unclusterSameDay = this.pixelsPerDay >= 30;
+		const clusters: TimelineCluster[] = [];
+
+		for (const ev of events) {
+			const centerX = eventCenterX.get(ev)!;
+
+			if (clusters.length > 0 && !unclusterSameDay) {
 				const last = clusters[clusters.length - 1];
 				const dist = Math.abs(centerX - last.startX);
 
@@ -536,20 +562,20 @@ export class HorizontalTimelineView {
 
 				// Hover: show list of all merged events
 				clusterEl.onmouseenter = (e) => {
+					this.cancelHideTooltip();
 					this.showClusterTooltip(cluster, e);
 				};
 				clusterEl.onmouseleave = () => {
-					this.hideTooltip();
+					this.scheduleHideTooltip();
 				};
 
 				// Click: smoothly zoom in directly centered on this cluster!
 				clusterEl.onclick = (e) => {
 					e.stopPropagation();
 					if (this.scrollWrapperEl) {
-						const rect = this.scrollWrapperEl.getBoundingClientRect();
 						const cursorScreenX = cluster.startX - this.scrollWrapperEl.scrollLeft;
 						const targetDay = cluster.startX / this.pixelsPerDay;
-						const nextZoom = Math.min(140, Math.round(this.pixelsPerDay * 2.2));
+						const nextZoom = Math.min(140, Math.max(30, Math.round(this.pixelsPerDay * 2.2)));
 						this.applyZoom(nextZoom, cursorScreenX, targetDay);
 					}
 				};
@@ -561,7 +587,7 @@ export class HorizontalTimelineView {
 			const ev = cluster.events[0];
 			const startOffsetDays = (ev.startTimestamp - this.minTimestamp) / dayMs;
 			const startX = startOffsetDays * this.pixelsPerDay;
-			const centerX = startX + (ev.isRange ? 0 : this.pixelsPerDay / 2);
+			const centerX = eventCenterX.get(ev)!;
 
 			let widthPx = this.pixelsPerDay;
 			if (ev.isRange) {
@@ -692,6 +718,7 @@ export class HorizontalTimelineView {
 
 			// HOVER TOOLTIP & PREVIEW
 			eventEl.onmouseenter = (e) => {
+				this.cancelHideTooltip();
 				this.showTooltip(ev, e);
 				this.app.workspace.trigger("hover-link", {
 					event: e,
@@ -704,7 +731,7 @@ export class HorizontalTimelineView {
 			};
 
 			eventEl.onmouseleave = () => {
-				this.hideTooltip();
+				this.scheduleHideTooltip();
 			};
 		}
 	}
@@ -716,6 +743,12 @@ export class HorizontalTimelineView {
 		this.tooltipEl = document.createElement("div");
 		this.tooltipEl.className = "timeline-floating-tooltip";
 		this.tooltipEl.style.display = "none";
+		this.tooltipEl.onmouseenter = () => {
+			this.cancelHideTooltip();
+		};
+		this.tooltipEl.onmouseleave = () => {
+			this.scheduleHideTooltip();
+		};
 		document.body.appendChild(this.tooltipEl);
 	}
 
@@ -866,6 +899,7 @@ export class HorizontalTimelineView {
 			descEl.setText(ev.description);
 		}
 
+		this.tooltipEl.removeClass("is-hiding");
 		this.tooltipEl.style.display = "block";
 		this.positionTooltip(mouseEvent);
 	}
@@ -902,6 +936,7 @@ export class HorizontalTimelineView {
 			};
 		}
 
+		this.tooltipEl.removeClass("is-hiding");
 		this.tooltipEl.style.display = "block";
 		this.positionTooltip(mouseEvent);
 	}
@@ -925,10 +960,43 @@ export class HorizontalTimelineView {
 		this.tooltipEl.style.top = `${Math.max(10, top)}px`;
 	}
 
-	private hideTooltip() {
-		if (this.tooltipEl) {
-			this.tooltipEl.style.display = "none";
+	private cancelHideTooltip() {
+		if (this.tooltipHideTimer !== null) {
+			window.clearTimeout(this.tooltipHideTimer);
+			this.tooltipHideTimer = null;
 		}
+		if (this.tooltipFadeTimer !== null) {
+			window.clearTimeout(this.tooltipFadeTimer);
+			this.tooltipFadeTimer = null;
+		}
+		if (this.tooltipEl) {
+			this.tooltipEl.removeClass("is-hiding");
+		}
+	}
+
+	private scheduleHideTooltip(delayMs: number = 220) {
+		this.cancelHideTooltip();
+		this.tooltipHideTimer = window.setTimeout(() => {
+			this.tooltipHideTimer = null;
+			this.hideTooltip();
+		}, delayMs);
+	}
+
+	private hideTooltip() {
+		if (this.tooltipHideTimer !== null) {
+			window.clearTimeout(this.tooltipHideTimer);
+			this.tooltipHideTimer = null;
+		}
+		if (!this.tooltipEl || this.tooltipEl.style.display === "none") return;
+
+		this.tooltipEl.addClass("is-hiding");
+		this.tooltipFadeTimer = window.setTimeout(() => {
+			this.tooltipFadeTimer = null;
+			if (this.tooltipEl) {
+				this.tooltipEl.removeClass("is-hiding");
+				this.tooltipEl.style.display = "none";
+			}
+		}, 120);
 	}
 
 	private setupInteractionHandlers(scrollWrapper: HTMLElement) {
@@ -1069,6 +1137,7 @@ export class HorizontalTimelineView {
 	}
 
 	public destroy() {
+		this.cancelHideTooltip();
 		if (this.animFrameId) {
 			cancelAnimationFrame(this.animFrameId);
 			this.animFrameId = null;

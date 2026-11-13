@@ -597,6 +597,10 @@
 	animation: tooltipFadeIn 0.12s ease-out;
 }
 
+.timeline-floating-tooltip.is-hiding {
+	animation: tooltipFadeOut 0.12s ease-in forwards;
+}
+
 @keyframes tooltipFadeIn {
 	from {
 		opacity: 0;
@@ -605,6 +609,17 @@
 	to {
 		opacity: 1;
 		transform: translateY(0);
+	}
+}
+
+@keyframes tooltipFadeOut {
+	from {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	to {
+		opacity: 0;
+		transform: translateY(4px);
 	}
 }
 
