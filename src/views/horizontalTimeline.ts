@@ -363,6 +363,10 @@ export class HorizontalTimelineView {
 			"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 		];
 
+		const viewWidth = this.scrollWrapperEl?.clientWidth || 1200;
+		// Hide monthly dividers once a full year (365 days) is half the viewport width or narrower
+		const hideMonthlyDividers = 365 * this.pixelsPerDay <= viewWidth * 0.5;
+
 		let currentMonth = -1;
 		let currentMonthYear = -1;
 		let currentMonthStartDay = 0;
@@ -370,13 +374,20 @@ export class HorizontalTimelineView {
 
 		const flushMonth = () => {
 			if (currentMonth !== -1 && currentMonthDaysCount > 0) {
-				const mEl = monthsRow.createDiv({ cls: "timeline-month-block" });
+				if (hideMonthlyDividers && currentMonth !== 0) {
+					return;
+				}
+				const mEl = monthsRow.createDiv({
+					cls: `timeline-month-block ${hideMonthlyDividers ? "is-year-block" : ""}`,
+				});
 				mEl.style.left = `${currentMonthStartDay * this.pixelsPerDay}px`;
 				mEl.style.width = `${currentMonthDaysCount * this.pixelsPerDay}px`;
 
 				// Adaptive month header depending on zoom
 				let labelText = "";
-				if (this.pixelsPerDay >= 35) {
+				if (hideMonthlyDividers) {
+					labelText = String(currentMonthYear);
+				} else if (this.pixelsPerDay >= 35) {
 					labelText = `${monthNamesFull[currentMonth]} ${currentMonthYear}`;
 				} else if (this.pixelsPerDay >= 12) {
 					labelText = `${monthNamesShort[currentMonth]} '${String(currentMonthYear).slice(2)}`;
@@ -418,8 +429,13 @@ export class HorizontalTimelineView {
 				currentMonthDaysCount++;
 			}
 
-			// Month-start grid lines when zoomed out (< 15px/day): only ~36 nodes for 3 years
-			if (this.settings.showGrid && this.pixelsPerDay < 15 && dayOfMonth === 1) {
+			// Grid lines when zoomed out (< 15px/day): monthly above the year-half-screen breakpoint, yearly at/below it
+			if (
+				this.settings.showGrid &&
+				this.pixelsPerDay < 15 &&
+				dayOfMonth === 1 &&
+				(!hideMonthlyDividers || month === 0)
+			) {
 				const gridLine = trackEl.createDiv({ cls: "timeline-grid-line is-month-start" });
 				gridLine.style.left = `${i * this.pixelsPerDay}px`;
 			}

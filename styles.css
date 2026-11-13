@@ -200,6 +200,10 @@
 	overflow: hidden;
 }
 
+.timeline-month-block.is-year-block {
+	overflow: visible;
+}
+
 .timeline-month-label {
 	font-size: 11.5px;
 	font-weight: 600;
