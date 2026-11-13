@@ -1387,6 +1387,60 @@ export class HorizontalTimelineView {
 			},
 			{ passive: false }
 		);
+
+		this.containerEl.addEventListener("keydown", (e: KeyboardEvent) => {
+			if (
+				e.target instanceof HTMLInputElement ||
+				e.target instanceof HTMLSelectElement ||
+				e.target instanceof HTMLTextAreaElement ||
+				(e.target instanceof HTMLElement && e.target.isContentEditable) ||
+				e.ctrlKey ||
+				e.metaKey ||
+				e.altKey
+			) {
+				return;
+			}
+			const hasCustomHotkey = (cmdId: string) => {
+				const fullId = `obsidian-timeline:${cmdId}`;
+				const custom = (this.app as any).hotkeyManager?.customKeys?.[fullId];
+				return Array.isArray(custom) && custom.length > 0;
+			};
+
+			if (e.key === "Home" && !hasCustomHotkey("reset-default-view")) {
+				e.preventDefault();
+				this.resetToDefaultView(true);
+			} else if (e.key === "ArrowLeft" && !e.shiftKey && !hasCustomHotkey("pan-left")) {
+				e.preventDefault();
+				this.panByViewportFraction(-0.15);
+			} else if (e.key === "ArrowRight" && !e.shiftKey && !hasCustomHotkey("pan-right")) {
+				e.preventDefault();
+				this.panByViewportFraction(0.15);
+			} else if (
+				((e.key === "ArrowLeft" && e.shiftKey) || e.key === "PageUp") &&
+				!hasCustomHotkey("jump-prev-month")
+			) {
+				e.preventDefault();
+				this.panByDays(-30);
+			} else if (
+				((e.key === "ArrowRight" && e.shiftKey) || e.key === "PageDown") &&
+				!hasCustomHotkey("jump-next-month")
+			) {
+				e.preventDefault();
+				this.panByDays(30);
+			} else if ((e.key === "+" || e.key === "=") && !hasCustomHotkey("zoom-in")) {
+				e.preventDefault();
+				this.stepZoomIn();
+			} else if ((e.key === "-" || e.key === "_") && !hasCustomHotkey("zoom-out")) {
+				e.preventDefault();
+				this.stepZoomOut();
+			} else if ((e.key === "0" || e.key === "z" || e.key === "Z") && !hasCustomHotkey("zoom-to-fit-all")) {
+				e.preventDefault();
+				this.zoomToFitAll();
+			} else if ((e.key === "l" || e.key === "L") && !hasCustomHotkey("cycle-label-mode")) {
+				e.preventDefault();
+				this.cycleLabelMode();
+			}
+		});
 	}
 
 	public stepZoomIn() {

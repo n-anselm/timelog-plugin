@@ -37,7 +37,7 @@ export class TimelinePlugin extends Plugin {
 		this.registerTimelineActionCommand(
 			"reset-default-view",
 			"Reset to default view (zoom & offset)",
-			[{ modifiers: [], key: "Home" }],
+			undefined,
 			(view) => view.resetToDefaultView(true)
 		);
 
@@ -51,58 +51,49 @@ export class TimelinePlugin extends Plugin {
 		this.registerTimelineActionCommand(
 			"zoom-to-fit-all",
 			"Zoom out to fit all events",
-			[
-				{ modifiers: [], key: "0" },
-				{ modifiers: [], key: "z" },
-			],
+			undefined,
 			(view) => view.zoomToFitAll()
 		);
 
 		this.registerTimelineActionCommand(
 			"zoom-in",
 			"Zoom in",
-			[{ modifiers: [], key: "=" }],
+			undefined,
 			(view) => view.stepZoomIn()
 		);
 
 		this.registerTimelineActionCommand(
 			"zoom-out",
 			"Zoom out",
-			[{ modifiers: [], key: "-" }],
+			undefined,
 			(view) => view.stepZoomOut()
 		);
 
 		this.registerTimelineActionCommand(
 			"pan-left",
 			"Pan left",
-			[{ modifiers: [], key: "ArrowLeft" }],
+			undefined,
 			(view) => view.panByViewportFraction(-0.15)
 		);
 
 		this.registerTimelineActionCommand(
 			"pan-right",
 			"Pan right",
-			[{ modifiers: [], key: "ArrowRight" }],
+			undefined,
 			(view) => view.panByViewportFraction(0.15)
 		);
 
 		this.registerTimelineActionCommand(
 			"jump-prev-month",
 			"Jump back 1 month",
-			[
-				{ modifiers: ["Shift"], key: "ArrowLeft" },
-				{ modifiers: [], key: "PageUp" },
-			],
+			undefined,
 			(view) => view.panByDays(-30)
 		);
 
 		this.registerTimelineActionCommand(
 			"jump-next-month",
 			"Jump forward 1 month",
-			[
-				{ modifiers: ["Shift"], key: "ArrowRight" },
-				{ modifiers: [], key: "PageDown" },
-			],
+			undefined,
 			(view) => view.panByDays(30)
 		);
 
@@ -123,7 +114,7 @@ export class TimelinePlugin extends Plugin {
 		this.registerTimelineActionCommand(
 			"cycle-label-mode",
 			"Cycle label display mode",
-			[{ modifiers: [], key: "l" }],
+			undefined,
 			(view) => view.cycleLabelMode()
 		);
 
@@ -166,6 +157,15 @@ export class TimelinePlugin extends Plugin {
 				const activeTimeline = this.app.workspace.getActiveViewOfType(TimelineView);
 				const hView = activeTimeline?.getHorizontalView();
 				if (!hView) return false;
+				const activeEl = document.activeElement;
+				if (
+					activeEl instanceof HTMLInputElement ||
+					activeEl instanceof HTMLSelectElement ||
+					activeEl instanceof HTMLTextAreaElement ||
+					(activeEl instanceof HTMLElement && activeEl.isContentEditable)
+				) {
+					return false;
+				}
 				if (!checking) {
 					action(hView);
 				}
