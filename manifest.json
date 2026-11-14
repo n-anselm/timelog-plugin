@@ -1,10 +1,10 @@
 {
   "id": "obsidian-timeline",
-  "name": "Timeline",
+  "name": "Timelog",
   "version": "1.1.0",
   "minAppVersion": "1.0.0",
   "description": "Interactive horizontal timeline with single-line tracking, multi-day spans, category colors, image previews, and adaptive labels.",
-  "author": "Nat",
+  "author": "nanselm",
   "authorUrl": "https://nanselm.com",
   "isDesktopOnly": false
 }

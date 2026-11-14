@@ -21,14 +21,14 @@ export class TimelinePlugin extends Plugin {
 		);
 
 		// Add Ribbon Icon
-		this.addRibbonIcon("calendar-range", "Open Timeline", () => {
+		this.addRibbonIcon("calendar-range", "Open Timelog", () => {
 			this.activateView();
 		});
 
 		// Add Command
 		this.addCommand({
 			id: "open-timeline-view",
-			name: "Open Timeline View",
+			name: "Open Timelog View",
 			callback: () => {
 				this.activateView();
 			},

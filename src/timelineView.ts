@@ -26,7 +26,7 @@ export class TimelineView extends ItemView {
 	}
 
 	public getDisplayText(): string {
-		return "Timeline";
+		return "Timelog";
 	}
 
 	public getIcon(): string {

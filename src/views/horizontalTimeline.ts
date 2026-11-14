@@ -316,7 +316,7 @@ export class HorizontalTimelineView {
 		// Settings Button (icon only)
 		const settingsBtn = rightGroup.createEl("button", {
 			cls: "timeline-btn timeline-btn-icon",
-			title: "Open Timeline Settings",
+			title: "Open Timelog Settings",
 		});
 		setIcon(settingsBtn.createSpan({ cls: "timeline-btn-lucide" }), "settings");
 		settingsBtn.onclick = () => {
