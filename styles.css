@@ -978,6 +978,60 @@
 	padding: 4px 8px;
 }
 
+.condition-tag-pill-box {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 5px;
+	flex: 1;
+	min-width: 160px;
+	padding: 3px 6px;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	cursor: text;
+}
+
+.condition-tag-pill-box:focus-within {
+	border-color: var(--interactive-accent);
+}
+
+.condition-tag-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 8px;
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-radius: 12px;
+	font-size: 11.5px;
+	font-weight: 500;
+	line-height: 1.2;
+}
+
+.condition-tag-chip-remove {
+	cursor: pointer;
+	font-weight: bold;
+	font-size: 13px;
+	line-height: 1;
+	opacity: 0.85;
+}
+
+.condition-tag-chip-remove:hover {
+	opacity: 1;
+}
+
+.condition-tag-inline-input {
+	flex: 1;
+	min-width: 80px !important;
+	border: none !important;
+	outline: none !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	padding: 2px 4px !important;
+	font-size: 12.5px !important;
+}
+
 .condition-extra-toggle {
 	display: inline-flex;
 	align-items: center;

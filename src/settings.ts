@@ -693,28 +693,31 @@ export class TimelineSettingTab extends PluginSettingTab {
 
 			// 4. Value input (hidden for exists / doesNotExist)
 			if (cond.operator !== "exists" && cond.operator !== "doesNotExist") {
-				const valInput = row.createEl("input", {
-					type: "text",
-					cls: "condition-value-input",
-					value: cond.value ?? "",
-				});
-				if (cond.operator === "matchesDatePattern") {
-					valInput.placeholder = "YYYY-MM-DD";
-					if (!cond.value) {
-						cond.value = "YYYY-MM-DD";
-						valInput.value = "YYYY-MM-DD";
-					}
-				} else if (cond.property === "file.tags") {
-					valInput.placeholder = "tag1, tag2";
-				} else if (cond.property === "file.folder") {
-					valInput.placeholder = "Calendar/Events";
+				if (cond.property === "file.tags") {
+					const tagPillBox = row.createDiv({ cls: "condition-tag-pill-box" });
+					this.renderTagPillsInput(tagPillBox, cond);
 				} else {
-					valInput.placeholder = "value";
+					const valInput = row.createEl("input", {
+						type: "text",
+						cls: "condition-value-input",
+						value: cond.value ?? "",
+					});
+					if (cond.operator === "matchesDatePattern") {
+						valInput.placeholder = "YYYY-MM-DD";
+						if (!cond.value) {
+							cond.value = "YYYY-MM-DD";
+							valInput.value = "YYYY-MM-DD";
+						}
+					} else if (cond.property === "file.folder") {
+						valInput.placeholder = "Calendar/Events";
+					} else {
+						valInput.placeholder = "value";
+					}
+					valInput.oninput = async () => {
+						cond.value = valInput.value.trim();
+						await this.plugin.saveSettings();
+					};
 				}
-				valInput.oninput = async () => {
-					cond.value = valInput.value.trim();
-					await this.plugin.saveSettings();
-				};
 			}
 
 			// 5. Conditional options (Include subfolders / require additional text)
@@ -769,6 +772,137 @@ export class TimelineSettingTab extends PluginSettingTab {
 			await this.plugin.saveSettings();
 			onRefresh();
 		};
+	}
+
+	private renderTagPillsInput(
+		container: HTMLElement,
+		cond: FilterCondition,
+		shouldFocus: boolean = false
+	) {
+		container.empty();
+
+		const tags = cond.value
+			? cond.value
+					.split(",")
+					.map((t) => t.replace(/^#/, "").trim())
+					.filter((t) => t.length > 0)
+			: [];
+
+		const commitTags = async (updated: string[], keepFocus: boolean) => {
+			cond.value = updated.join(", ");
+			await this.plugin.saveSettings();
+			this.renderTagPillsInput(container, cond, keepFocus);
+		};
+
+		for (let i = 0; i < tags.length; i++) {
+			const chip = container.createSpan({ cls: "condition-tag-chip" });
+			chip.createSpan({ text: tags[i] });
+			const removeBtn = chip.createSpan({
+				cls: "condition-tag-chip-remove",
+				text: "×",
+				title: "Remove tag",
+			});
+			removeBtn.onclick = async (e) => {
+				e.stopPropagation();
+				tags.splice(i, 1);
+				await commitTags(tags, true);
+			};
+		}
+
+		const listId = "timeline-tags-datalist-" + Math.random().toString(36).slice(2, 8);
+		const tagInput = container.createEl("input", {
+			type: "text",
+			cls: "condition-tag-inline-input",
+			attr: {
+				placeholder: tags.length === 0 ? "Add tag…" : "",
+				list: listId,
+			},
+		});
+
+		const datalist = container.createEl("datalist", { attr: { id: listId } });
+		for (const vaultTag of this.getVaultTags()) {
+			if (!tags.includes(vaultTag)) {
+				datalist.createEl("option", { value: vaultTag });
+			}
+		}
+
+		const addPendingTag = async (raw: string, keepFocus: boolean) => {
+			const parts = raw
+				.split(",")
+				.map((t) => t.replace(/^#/, "").trim())
+				.filter((t) => t.length > 0);
+			if (parts.length === 0) return;
+			let changed = false;
+			for (const p of parts) {
+				if (!tags.includes(p)) {
+					tags.push(p);
+					changed = true;
+				}
+			}
+			if (changed) {
+				await commitTags(tags, keepFocus);
+			} else {
+				tagInput.value = "";
+			}
+		};
+
+		tagInput.onkeydown = async (e: KeyboardEvent) => {
+			if (e.key === "Enter" || e.key === ",") {
+				e.preventDefault();
+				await addPendingTag(tagInput.value, true);
+			} else if (e.key === "Backspace" && tagInput.value === "" && tags.length > 0) {
+				e.preventDefault();
+				tags.pop();
+				await commitTags(tags, true);
+			}
+		};
+
+		tagInput.onchange = async () => {
+			if (tagInput.value.trim()) {
+				await addPendingTag(tagInput.value, false);
+			}
+		};
+
+		tagInput.onblur = async () => {
+			if (tagInput.value.trim()) {
+				await addPendingTag(tagInput.value, false);
+			}
+		};
+
+		container.onclick = () => {
+			tagInput.focus();
+		};
+
+		if (shouldFocus) {
+			setTimeout(() => tagInput.focus(), 0);
+		}
+	}
+
+	private getVaultTags(): string[] {
+		const tags = new Set<string>();
+		const files = this.app.vault.getMarkdownFiles();
+		for (const file of files) {
+			const cache = this.app.metadataCache.getFileCache(file);
+			const fmTags = cache?.frontmatter?.tags ?? cache?.frontmatter?.tag;
+			if (Array.isArray(fmTags)) {
+				for (const t of fmTags) {
+					const clean = String(t).replace(/^#/, "").trim();
+					if (clean) tags.add(clean);
+				}
+			} else if (typeof fmTags === "string") {
+				for (const part of fmTags.split(/[,\s]+/)) {
+					const clean = part.replace(/^#/, "").trim();
+					if (clean) tags.add(clean);
+				}
+			}
+			if (cache?.tags) {
+				for (const t of cache.tags) {
+					const clean = t.tag.replace(/^#/, "").trim();
+					if (clean) tags.add(clean);
+				}
+			}
+		}
+		return Array.from(tags).sort();
 	}
 
 	private resolveHexForPicker(color: string): string {
