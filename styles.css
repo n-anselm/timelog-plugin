@@ -120,12 +120,6 @@
 	outline: none;
 }
 
-.timeline-zoom-slider {
-	width: 85px;
-	cursor: pointer;
-	accent-color: var(--interactive-accent);
-}
-
 /* Category Filter Pills */
 .timeline-categories-group {
 	display: flex;

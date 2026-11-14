@@ -30,7 +30,6 @@ export class HorizontalTimelineView {
 	private daysRowEl: HTMLElement | null = null;
 	private trackContentEl: HTMLElement | null = null;
 	private searchInputEl: HTMLInputElement | null = null;
-	private zoomSliderEl: HTMLInputElement | null = null;
 	private tooltipEl: HTMLElement | null = null;
 	private tooltipHideTimer: number | null = null;
 	private tooltipFadeTimer: number | null = null;
@@ -139,9 +138,6 @@ export class HorizontalTimelineView {
 			if (this.settings.autoScrollToToday) {
 				setTimeout(() => {
 					this.pixelsPerDay = this.computeDefaultZoomPixelsPerDay();
-					if (this.zoomSliderEl) {
-						this.zoomSliderEl.value = String(this.pixelsPerDay);
-					}
 					this.renderTrack();
 					this.scrollToDefaultView(false);
 				}, 50);
@@ -317,38 +313,18 @@ export class HorizontalTimelineView {
 			this.renderTrack();
 		};
 
-		// Zoom Out Button
-		const zoomOutBtn = rightGroup.createEl("button", {
-			text: "－",
+		// Settings Button (icon only)
+		const settingsBtn = rightGroup.createEl("button", {
 			cls: "timeline-btn timeline-btn-icon",
-			title: "Zoom Out",
+			title: "Open Timeline Settings",
 		});
-		zoomOutBtn.onclick = () => {
-			const nextZoom = this.pixelsPerDay < 10 ? this.pixelsPerDay - 1 : this.pixelsPerDay - 6;
-			this.applyZoom(nextZoom);
-		};
-
-		// Zoom Slider (supports all the way down to 1px/day for multi-year view!)
-		this.zoomSliderEl = rightGroup.createEl("input", {
-			type: "range",
-			cls: "timeline-zoom-slider",
-		});
-		this.zoomSliderEl.min = "1";
-		this.zoomSliderEl.max = "140";
-		this.zoomSliderEl.value = String(this.pixelsPerDay);
-		this.zoomSliderEl.oninput = (e) => {
-			this.applyZoom(parseInt((e.target as HTMLInputElement).value, 10));
-		};
-
-		// Zoom In Button
-		const zoomInBtn = rightGroup.createEl("button", {
-			text: "＋",
-			cls: "timeline-btn timeline-btn-icon",
-			title: "Zoom In",
-		});
-		zoomInBtn.onclick = () => {
-			const nextZoom = this.pixelsPerDay < 10 ? this.pixelsPerDay + 2 : this.pixelsPerDay + 8;
-			this.applyZoom(nextZoom);
+		setIcon(settingsBtn.createSpan({ cls: "timeline-btn-lucide" }), "settings");
+		settingsBtn.onclick = () => {
+			const setting = (this.app as any).setting;
+			if (setting) {
+				setting.open();
+				setting.openTabById("obsidian-timeline");
+			}
 		};
 	}
 
@@ -367,10 +343,6 @@ export class HorizontalTimelineView {
 		this.pixelsPerDay = clamped;
 		this.settings.zoomPixelsPerDay = clamped;
 		this.onSettingsChange();
-
-		if (this.zoomSliderEl) {
-			this.zoomSliderEl.value = String(clamped);
-		}
 
 		// Re-render ONLY track contents without destroying outer containers
 		this.renderTrack();
@@ -1533,9 +1505,6 @@ export class HorizontalTimelineView {
 			this.pixelsPerDay = targetPx;
 			this.settings.zoomPixelsPerDay = targetPx;
 			this.onSettingsChange();
-			if (this.zoomSliderEl) {
-				this.zoomSliderEl.value = String(targetPx);
-			}
 			this.renderTrack();
 
 			const targetScrollLeft = Math.max(0, Math.round(centerDay * targetPx - viewWidth / 2));
@@ -1553,9 +1522,6 @@ export class HorizontalTimelineView {
 			this.pixelsPerDay = targetPx;
 			this.settings.zoomPixelsPerDay = targetPx;
 			this.onSettingsChange();
-			if (this.zoomSliderEl) {
-				this.zoomSliderEl.value = String(targetPx);
-			}
 			this.renderTrack();
 		}
 		this.scrollToDefaultView(smooth);
