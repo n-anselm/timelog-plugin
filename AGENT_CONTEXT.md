@@ -14,7 +14,7 @@ This plugin shows notes that have dates in their frontmatter on one continuous h
 
 1. `src/*.ts` and `src/styles.css` — the truth.
 2. This file — verified notes and intent.
-3. `README.md` — user-facing, and currently **stale** (it promises tags in popups and a "22 KB" bundle; neither is true).
+3. `README.md` — user-facing overview (updated for `v1.1.0`).
 
 **Never edit these by hand:**
 
@@ -40,9 +40,9 @@ This plugin shows notes that have dates in their frontmatter on one continuous h
 - Frontmatter `image` preview support: resolves wiki-links (`"[[image.jpeg]]"`), markdown links, vault paths, and URLs to a thumbnail in the hover popup, plus a `75vh` hover lightbox (`Esc` or mouse-out to close).
 - **Condition-based Categories & Colors (Linear Calendar style):**
   - Each category has an expandable card in Settings with drag-to-reorder priority (first match wins), enable checkbox, colour picker + hex/CSS variable input, `matchMode` (`All (AND)` / `Any (OR)`), and a multi-condition builder.
-  - Conditions support `Tags`, `Folder` (with `Subfolders` option), `File Name`, `File Basename`, `Path`, `Extension`, and any `Custom frontmatter property`, with operators `is`, `is not`, `contains`, `does not contain`, `starts with`, `ends with`, `matches date pattern` (`+ text`), `exists`, and `does not exist`.
+  - Conditions support `Tags` (multi-tag pill input with vault tag autocomplete), `Folder` (with `Subfolders` option), `File Name`, `File Basename`, `Path`, `Extension`, and any `Custom frontmatter property`, with operators `is`, `is not`, `contains`, `does not contain`, `starts with`, `ends with`, `matches date pattern` (`+ text`), `exists`, and `does not exist`. All text inputs save live (`oninput`).
   - Uncategorized notes are hidden by default (`showUncategorizedNotes: false`) so only notes matching at least one enabled category appear on the timeline. Legacy `cat.tag` configs migrate automatically via `normalizeCategoryConfig()`.
-- Horizontal view as a tab (ribbon icon and command), plus a ```` ```timeline ```` code block embed with `MarkdownRenderChild` cleanup on unload.
+- Horizontal view as a tab ("Timelog", ribbon icon and `Timelog: Open Timelog View` command), plus a ```` ```timeline ```` code block embed with `MarkdownRenderChild` cleanup on unload.
 - Single central axis (`4px` thick); `16px` dots for single-day events, scaled bars (`22/12/6px`) for ranges.
 - Same-day point events spread horizontally across their day column (`(idx + 1) / (count + 1)`) and uncluster automatically at `≥ 30 px/day` into separate dots and alternating above/below stems.
 - Persistent month + day ruler (`76px` tall) with viewport-virtualized day cells (`renderVisibleRulerDays`). At `< 30 px/day`, the days row fades out over `0.4s` in place without shifting the timeline stage. When zoomed out to where a year is `≤ 50%` of the viewport width, monthly dividers and monthly grid lines hide and the year label overflows cleanly (`is-year-block`).
@@ -62,7 +62,7 @@ This plugin shows notes that have dates in their frontmatter on one continuous h
   - `L`: Cycle label display mode
   - `/`: Focus toolbar quick-search filter (`Esc` clears and returns focus)
   - Unassigned commands available in Hotkeys editor: `Center on today`, `Jump back 1 year`, `Jump forward 1 year`
-- Toolbar: Today, `±Month`, `±Year` (with Lucide chevron icons), category filter pills, live `Filter events… (/)` search input, label mode dropdown, zoom slider and `±` buttons.
+- Toolbar: Today, `±Month`, `±Year` (with Lucide chevron icons), category filter pills, live `Filter events… (/)` search input, label mode dropdown, and an icon-only Settings button (`settings` gear icon) that opens the Timelog settings tab.
 - Tooltip with `220ms` close delay (stays open while hovered), `0.12s` fade-in and fade-out, title, formatted dates/range, relative time, `color-mix()` category badge, optional image thumbnail + hover lightbox, and description.
 - Live refresh on vault create/delete/rename and metadata change (`300 ms` trailing debounce). View-internal zoom/filter updates save quietly (`saveSettingsQuiet()`, `400 ms` debounce) without triggering a redundant vault rescan or double render.
 
@@ -135,10 +135,13 @@ Stored in `data.json` at the plugin root (gitignored).
 |---|---|---|
 | `folder` | `"Calendar"` | Folder to scan; blank = whole vault |
 | `includeSubfolders` | `true` | Recursive scan |
+| `filterMode` | `"none"` | Global pre-filter (`none` / `include` / `exclude`) |
+| `filterConditions` | `[]` | Multi-condition rules for the global note filter |
 | `startDateProperties` | `["date","startDate","start"]` | Priority order for the start date |
 | `endDateProperties` | `["date-end","endDate","end"]` | Priority order for the end date |
-| `categories` | 4 defaults | Tag → name/colour/enabled mapping (unchecked hides category events & pill) |
-| `defaultColor` | `var(--interactive-accent)` | Colour for uncategorised events (with colour picker) |
+| `categories` | 4 defaults | Condition-based category cards (priority order, first match wins; unchecked hides category events & pill) |
+| `showUncategorizedNotes` | `false` | Hide dated notes that match no enabled category by default |
+| `defaultColor` | `var(--interactive-accent)` | Colour for uncategorised events when `showUncategorizedNotes` is enabled |
 | `todayMarkerColor` | `"#ff3333"` | Today vertical line and badge colour (`--today-color`) |
 | `defaultViewSpan` | `"6 months"` | Initial visible time span (e.g. `6 months`, `6mo`, `5 days`, `1 year`) |
 | `defaultViewOffset` | `"0"` | Initial view offset from today (`0` centers today, `-1 month` shifts today 1 month right) |
@@ -164,7 +167,7 @@ Stored in `data.json` at the plugin root (gitignored).
 | Global CSS leaks | The installed **Linear Calendar** plugin defines global `.day-number { position: absolute; top: 3px; ... }`. Always keep `.timeline-day-tick .day-number` scoped with `position: static !important; top: auto !important;`. |
 | Single-key hotkeys | Never pass unmodified single-character keys (like `l`, `z`, `0`) in `addCommand({ hotkeys })` — Obsidian's global `hotkeyManager` intercepts them across the whole app and blocks typing those letters. Keep single-key defaults on `.obsidian-timeline-wrapper`'s `keydown` listener and leave `addCommand` hotkeys `undefined` so users can optionally bind custom keys in Settings → Hotkeys. |
 | Quiet saves on zoom | `HorizontalTimelineView` must use `saveSettingsQuiet()` (debounced `saveData` only), never `saveSettings()` (`refreshOpenViews()`), or every wheel notch will re-index the vault and render the timeline twice. |
-| Persistent ruler | Keep `rulerEl` / `daysRowEl` persistent outside `trackContentEl` and fixed at `76px` height so the `0.4s` opacity fade on `.timeline-ruler-days` never shifts the timeline vertically or gets interrupted by wheel ticks. |
+| Persistent ruler | Keep `rulerEl` / `daysRowEl` persistent outside `trackContentEl` and fixed at `76px` height so the `0.4s` opacity fade on `.timeline-ruler-days` never shifts the timeline vertically or gets interrupted by wheel ticks. Because `.timeline-track-content` has `pointer-events: none`, interactive children (`.timeline-event-dot`, `.timeline-event-bar`, `.timeline-event-label`, `.timeline-cluster-dot`) must explicitly set `pointer-events: auto`. |
 | CSS copy | Always `cp src/styles.css styles.css` after editing `src/styles.css` and check with `diff -q src/styles.css styles.css`. |
 
 ---
