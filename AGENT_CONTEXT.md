@@ -1,6 +1,6 @@
 # Obsidian Timeline (Timelog) — Agent Handoff
 
-> **Last verified:** 2026-11-13 (v1.0.0 — source built & synced against `main.js` and `styles.css`)
+> **Last verified:** 2026-11-14 (v1.1.0 — source built & synced against `main.js` and `styles.css`)
 > **Status:** Working. Built, loaded in Obsidian, single horizontal view + codeblock embed.
 > **Purpose:** Everything an AI agent needs to continue this plugin without prior context.
 
@@ -29,16 +29,19 @@ This plugin shows notes that have dates in their frontmatter on one continuous h
 
 ---
 
-## 1. Current state (v1.0.0)
+## 1. Current state (v1.1.0)
 
 ### Implemented and working (main view & embedded view unless noted)
 
-- Read-only vault indexing from a configurable folder (default `Calendar`), subfolders optional.
+- Read-only vault indexing from a configurable folder (default `Calendar`), subfolders optional, plus an optional **Global note filter** (`none` / `include` / `exclude`) with multi-condition rules.
 - Start date from frontmatter (`date`, `startDate`, `start`) or a `YYYY-MM-DD` in the filename, with strict calendar validity checking (rejects impossible dates like `2026-02-31`).
 - End date from frontmatter (`date-end`, `endDate`, `end`) for multi-day bars.
 - Optional alias label mode (`useAliasAsLabel`, off by default): uses the first `aliases` / `alias` entry as the event title/label when enabled.
 - Frontmatter `image` preview support: resolves wiki-links (`"[[image.jpeg]]"`), markdown links, vault paths, and URLs to a thumbnail in the hover popup, plus a `75vh` hover lightbox (`Esc` or mouse-out to close).
-- Tags → category → colour, with per-note `color` override, a configurable default colour, and native colour pickers + live swatches in Settings. Unchecking a category's enable box hides its events and removes its toolbar pill.
+- **Condition-based Categories & Colors (Linear Calendar style):**
+  - Each category has an expandable card in Settings with drag-to-reorder priority (first match wins), enable checkbox, colour picker + hex/CSS variable input, `matchMode` (`All (AND)` / `Any (OR)`), and a multi-condition builder.
+  - Conditions support `Tags`, `Folder` (with `Subfolders` option), `File Name`, `File Basename`, `Path`, `Extension`, and any `Custom frontmatter property`, with operators `is`, `is not`, `contains`, `does not contain`, `starts with`, `ends with`, `matches date pattern` (`+ text`), `exists`, and `does not exist`.
+  - Uncategorized notes are hidden by default (`showUncategorizedNotes: false`) so only notes matching at least one enabled category appear on the timeline. Legacy `cat.tag` configs migrate automatically via `normalizeCategoryConfig()`.
 - Horizontal view as a tab (ribbon icon and command), plus a ```` ```timeline ```` code block embed with `MarkdownRenderChild` cleanup on unload.
 - Single central axis (`4px` thick); `16px` dots for single-day events, scaled bars (`22/12/6px`) for ranges.
 - Same-day point events spread horizontally across their day column (`(idx + 1) / (count + 1)`) and uncluster automatically at `≥ 30 px/day` into separate dots and alternating above/below stems.
@@ -186,4 +189,4 @@ Stored in `data.json` at the plugin root (gitignored).
 - **Plugin:** `.obsidian/plugins/obsidian-timeline/`
 - **Event notes:** `Calendar/` by default (configurable; blank scans the whole vault)
 - **Related plugin:** Linear Calendar, sharing the `date` / `date-end` / `#event` convention
-- **Version:** `1.0.0`, `minAppVersion` `1.0.0`
+- **Version:** `1.1.0`, `minAppVersion` `1.0.0`

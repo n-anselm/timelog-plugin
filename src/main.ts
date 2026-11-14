@@ -1,5 +1,5 @@
 import { Hotkey, Plugin, WorkspaceLeaf, debounce } from "obsidian";
-import { DEFAULT_SETTINGS, TimelineSettings } from "./types";
+import { DEFAULT_SETTINGS, TimelineSettings, normalizeCategoryConfig } from "./types";
 import { TimelineView, VIEW_TYPE_TIMELINE } from "./timelineView";
 import { TimelineSettingTab } from "./settings";
 import { registerTimelineCodeBlock } from "./codeblock";
@@ -132,6 +132,12 @@ export class TimelinePlugin extends Plugin {
 	async loadSettings() {
 		const saved = await this.loadData();
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, saved);
+		if (Array.isArray(this.settings.categories)) {
+			this.settings.categories = this.settings.categories.map((c) => normalizeCategoryConfig(c));
+		}
+		if (!Array.isArray(this.settings.filterConditions)) {
+			this.settings.filterConditions = [];
+		}
 	}
 
 	async saveSettings() {

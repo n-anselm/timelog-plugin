@@ -1,5 +1,11 @@
 import { App, TFile } from "obsidian";
-import { TimelineEvent, TimelineSettings } from "./types";
+import {
+	CategoryConfig,
+	FilterCondition,
+	TimelineEvent,
+	TimelineSettings,
+	normalizeCategoryConfig,
+} from "./types";
 
 export class TimelineIndexer {
 	private app: App;
@@ -14,6 +20,9 @@ export class TimelineIndexer {
 
 		for (const file of files) {
 			if (!this.fileMatchesFolder(file, settings)) {
+				continue;
+			}
+			if (!this.filePassesGlobalFilter(file, settings)) {
 				continue;
 			}
 
@@ -47,6 +56,205 @@ export class TimelineIndexer {
 			const parentPath = file.parent ? file.parent.path.replace(/^\/+|\/+$/g, "") : "";
 			return parentPath === targetFolder;
 		}
+	}
+
+	private filePassesGlobalFilter(file: TFile, settings: TimelineSettings): boolean {
+		const mode = settings.filterMode || "none";
+		const conditions = settings.filterConditions || [];
+		if (mode === "none" || conditions.length === 0) {
+			return true;
+		}
+		const cache = this.app.metadataCache.getFileCache(file);
+		const tags = this.extractTags(cache);
+		const matchesAll = conditions.every((c) =>
+			this.evaluateCondition(file, cache?.frontmatter, tags, c)
+		);
+		return mode === "include" ? matchesAll : !matchesAll;
+	}
+
+	private extractTags(cache: any): string[] {
+		const tagsSet = new Set<string>();
+		const frontmatter = cache?.frontmatter;
+		if (frontmatter) {
+			if (Array.isArray(frontmatter.tags)) {
+				for (const t of frontmatter.tags) {
+					if (typeof t === "string") tagsSet.add(t.replace(/^#/, "").trim());
+				}
+			} else if (typeof frontmatter.tags === "string") {
+				frontmatter.tags
+					.split(/[,\s]+/)
+					.forEach((t: string) => {
+						const cl = t.replace(/^#/, "").trim();
+						if (cl) tagsSet.add(cl);
+					});
+			}
+
+			if (Array.isArray(frontmatter.tag)) {
+				for (const t of frontmatter.tag) {
+					if (typeof t === "string") tagsSet.add(t.replace(/^#/, "").trim());
+				}
+			} else if (typeof frontmatter.tag === "string") {
+				frontmatter.tag
+					.split(/[,\s]+/)
+					.forEach((t: string) => {
+						const cl = t.replace(/^#/, "").trim();
+						if (cl) tagsSet.add(cl);
+					});
+			}
+		}
+
+		if (cache?.tags) {
+			for (const t of cache.tags) {
+				tagsSet.add(t.tag.replace(/^#/, "").trim());
+			}
+		}
+
+		return Array.from(tagsSet);
+	}
+
+	public evaluateCondition(
+		file: TFile,
+		frontmatter: Record<string, any> | undefined,
+		tags: string[],
+		condition: FilterCondition
+	): boolean {
+		const property = condition.property || "file.tags";
+		const operator = condition.operator || "contains";
+		const rawVal = (condition.value ?? "").trim();
+
+		// Tag conditions support comma-separated tag lists (like Linear Calendar)
+		if (property === "file.tags") {
+			if (operator === "exists") return tags.length > 0;
+			if (operator === "doesNotExist") return tags.length === 0;
+
+			const targetTags = rawVal
+				.split(",")
+				.map((t) => t.replace(/^#/, "").trim().toLowerCase())
+				.filter((t) => t.length > 0);
+			if (targetTags.length === 0) return false;
+
+			const lowerTags = tags.map((t) => t.toLowerCase());
+			if (operator === "is") {
+				return targetTags.every((target) => lowerTags.some((t) => t === target));
+			}
+			if (operator === "isNot") {
+				return !targetTags.some((target) => lowerTags.some((t) => t === target));
+			}
+			if (operator === "contains") {
+				return targetTags.some((target) =>
+					lowerTags.some((t) => t === target || t.includes(target))
+				);
+			}
+			if (operator === "doesNotContain") {
+				return !targetTags.some((target) =>
+					lowerTags.some((t) => t === target || t.includes(target))
+				);
+			}
+			return false;
+		}
+
+		let actualValue: any;
+		if (property === "file.name") {
+			actualValue = file.name;
+		} else if (property === "file.basename") {
+			actualValue = file.basename;
+		} else if (property === "file.folder") {
+			actualValue = file.parent ? file.parent.path.replace(/^\/+|\/+$/g, "") : "";
+		} else if (property === "file.path") {
+			actualValue = file.path;
+		} else if (property === "file.ext") {
+			actualValue = file.extension;
+		} else {
+			const propKey = property.startsWith("property:") ? property.slice(9) : property;
+			actualValue = frontmatter ? frontmatter[propKey] : undefined;
+		}
+
+		if (operator === "exists") {
+			return actualValue !== undefined && actualValue !== null && String(actualValue).trim() !== "";
+		}
+		if (operator === "doesNotExist") {
+			return actualValue === undefined || actualValue === null || String(actualValue).trim() === "";
+		}
+
+		if (operator === "matchesDatePattern") {
+			const fmt = rawVal || "YYYY-MM-DD";
+			const regexStr = fmt
+				.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+				.replace(/YYYY/g, "\\d{4}")
+				.replace(/YY/g, "\\d{2}")
+				.replace(/MM/g, "\\d{2}")
+				.replace(/DD/g, "\\d{2}");
+			const match = file.basename.match(new RegExp(`^(${regexStr})`));
+			if (!match) return false;
+			if (condition.requireAdditionalText) {
+				return file.basename.trim().length > match[0].length;
+			}
+			return true;
+		}
+
+		const targetLower = rawVal.toLowerCase();
+
+		if (property === "file.folder" && (operator === "is" || operator === "isNot")) {
+			const cleanFolder = rawVal.replace(/^\/+|\/+$/g, "").toLowerCase();
+			const parentLower = String(actualValue || "").toLowerCase();
+			let isMatch = parentLower === cleanFolder;
+			if (condition.includeSubfolders && cleanFolder) {
+				isMatch = isMatch || file.path.toLowerCase().startsWith(cleanFolder + "/");
+			}
+			return operator === "is" ? isMatch : !isMatch;
+		}
+
+		if (actualValue === undefined || actualValue === null) {
+			return operator === "isNot" || operator === "doesNotContain";
+		}
+
+		const valuesList: string[] = Array.isArray(actualValue)
+			? actualValue.map((v) => String(v))
+			: [String(actualValue)];
+
+		switch (operator) {
+			case "is":
+				return valuesList.some((v) => v.toLowerCase() === targetLower);
+			case "isNot":
+				return !valuesList.some((v) => v.toLowerCase() === targetLower);
+			case "contains":
+				if (!targetLower) return false;
+				return valuesList.some((v) => v.toLowerCase().includes(targetLower));
+			case "doesNotContain":
+				if (!targetLower) return true;
+				return !valuesList.some((v) => v.toLowerCase().includes(targetLower));
+			case "startsWith":
+				if (!targetLower) return false;
+				return valuesList.some((v) => v.toLowerCase().startsWith(targetLower));
+			case "endsWith":
+				if (!targetLower) return false;
+				return valuesList.some((v) => v.toLowerCase().endsWith(targetLower));
+			case "matches":
+				try {
+					const re = new RegExp(rawVal, "i");
+					return valuesList.some((v) => re.test(v));
+				} catch {
+					return false;
+				}
+			default:
+				return false;
+		}
+	}
+
+	private categoryMatchesFile(
+		cat: CategoryConfig,
+		file: TFile,
+		frontmatter: Record<string, any> | undefined,
+		tags: string[]
+	): boolean {
+		normalizeCategoryConfig(cat);
+		const conds = cat.conditions || [];
+		if (conds.length === 0) return false;
+		const mode = cat.matchMode || "all";
+		if (mode === "any") {
+			return conds.some((c) => this.evaluateCondition(file, frontmatter, tags, c));
+		}
+		return conds.every((c) => this.evaluateCondition(file, frontmatter, tags, c));
 	}
 
 	public parseFile(file: TFile, settings: TimelineSettings): TimelineEvent | null {
@@ -94,39 +302,13 @@ export class TimelineIndexer {
 		}
 
 		// Collect tags
-		const tagsSet = new Set<string>();
-		if (frontmatter) {
-			if (Array.isArray(frontmatter.tags)) {
-				for (const t of frontmatter.tags) {
-					if (typeof t === "string") tagsSet.add(t.replace(/^#/, "").trim());
-				}
-			} else if (typeof frontmatter.tags === "string") {
-				frontmatter.tags.split(",").forEach(t => tagsSet.add(t.replace(/^#/, "").trim()));
-			}
+		const tags = this.extractTags(cache);
 
-			if (Array.isArray(frontmatter.tag)) {
-				for (const t of frontmatter.tag) {
-					if (typeof t === "string") tagsSet.add(t.replace(/^#/, "").trim());
-				}
-			} else if (typeof frontmatter.tag === "string") {
-				frontmatter.tag.split(",").forEach(t => tagsSet.add(t.replace(/^#/, "").trim()));
-			}
-		}
-
-		if (cache?.tags) {
-			for (const t of cache.tags) {
-				tagsSet.add(t.tag.replace(/^#/, "").trim());
-			}
-		}
-
-		const tags = Array.from(tagsSet);
-
-		// Determine category and color
-		let matchedCategory = null;
+		// Determine category and color (first enabled matching category wins)
+		let matchedCategory: CategoryConfig | null = null;
 		let matchesDisabledCategory = false;
 		for (const cat of settings.categories) {
-			const targetTag = cat.tag.replace(/^#/, "").trim().toLowerCase();
-			if (tags.some(t => t.toLowerCase() === targetTag)) {
+			if (this.categoryMatchesFile(cat, file, frontmatter, tags)) {
 				if (cat.enabled) {
 					matchedCategory = cat;
 					break;
@@ -138,6 +320,11 @@ export class TimelineIndexer {
 
 		// If the note matches a disabled category (and no enabled category), exclude it
 		if (!matchedCategory && matchesDisabledCategory) {
+			return null;
+		}
+
+		// Hide uncategorized notes unless showUncategorizedNotes is enabled
+		if (!matchedCategory && !(settings.showUncategorizedNotes ?? false)) {
 			return null;
 		}
 

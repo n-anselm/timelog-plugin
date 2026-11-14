@@ -16,20 +16,45 @@ export interface TimelineEvent {
 	imageUrl: string | null;
 }
 
+export type ConditionOperator =
+	| "is"
+	| "isNot"
+	| "contains"
+	| "doesNotContain"
+	| "startsWith"
+	| "endsWith"
+	| "matches"
+	| "exists"
+	| "doesNotExist"
+	| "matchesDatePattern";
+
+export interface FilterCondition {
+	property: string; // "file.folder" | "file.tags" | "file.name" | "file.basename" | "file.path" | "file.ext" | custom frontmatter key
+	operator: ConditionOperator;
+	value: string;
+	includeSubfolders?: boolean;
+	requireAdditionalText?: boolean;
+}
+
 export interface CategoryConfig {
 	id: string;
 	name: string;
-	tag: string;
+	tag?: string; // legacy v1.0 field migrated to conditions
 	color: string;
 	enabled: boolean;
+	matchMode?: "all" | "any";
+	conditions?: FilterCondition[];
 }
 
 export interface TimelineSettings {
 	folder: string;
 	includeSubfolders: boolean;
+	filterMode: "none" | "include" | "exclude";
+	filterConditions: FilterCondition[];
 	startDateProperties: string[];
 	endDateProperties: string[];
 	categories: CategoryConfig[];
+	showUncategorizedNotes: boolean;
 	defaultColor: string;
 	todayMarkerColor: string;
 	defaultViewSpan: string; // e.g. "6mo", "5 days", "1 year"
@@ -76,39 +101,59 @@ export const DEFAULT_CATEGORIES: CategoryConfig[] = [
 	{
 		id: "event",
 		name: "Event",
-		tag: "event",
 		color: "var(--interactive-accent)",
 		enabled: true,
+		matchMode: "all",
+		conditions: [{ property: "file.tags", operator: "contains", value: "event" }],
 	},
 	{
 		id: "project",
 		name: "Project",
-		tag: "project",
 		color: "#6c849d",
 		enabled: true,
+		matchMode: "all",
+		conditions: [{ property: "file.tags", operator: "contains", value: "project" }],
 	},
 	{
 		id: "milestone",
 		name: "Milestone",
-		tag: "milestone",
 		color: "#779d6c",
 		enabled: true,
+		matchMode: "all",
+		conditions: [{ property: "file.tags", operator: "contains", value: "milestone" }],
 	},
 	{
 		id: "deadline",
 		name: "Deadline",
-		tag: "deadline",
 		color: "#ff3333",
 		enabled: true,
+		matchMode: "all",
+		conditions: [{ property: "file.tags", operator: "contains", value: "deadline" }],
 	},
 ];
+
+export function normalizeCategoryConfig(cat: CategoryConfig): CategoryConfig {
+	if (!Array.isArray(cat.conditions)) {
+		const legacyTag = (cat.tag || "").replace(/^#/, "").trim();
+		cat.conditions = legacyTag
+			? [{ property: "file.tags", operator: "contains", value: legacyTag }]
+			: [];
+	}
+	if (!cat.matchMode) {
+		cat.matchMode = "all";
+	}
+	return cat;
+}
 
 export const DEFAULT_SETTINGS: TimelineSettings = {
 	folder: "Calendar",
 	includeSubfolders: true,
+	filterMode: "none",
+	filterConditions: [],
 	startDateProperties: ["date", "startDate", "start"],
 	endDateProperties: ["date-end", "endDate", "end"],
 	categories: DEFAULT_CATEGORIES,
+	showUncategorizedNotes: false,
 	defaultColor: "var(--interactive-accent)",
 	todayMarkerColor: "#ff3333",
 	defaultViewSpan: "6 months",
