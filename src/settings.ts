@@ -4,16 +4,10 @@ import {
 	CategoryConfig,
 	ConditionOperator,
 	FilterCondition,
-	MarkerShape,
+	MarkerStyle,
+	getContrastingIconColor,
 	normalizeCategoryConfig,
 } from "./types";
-
-const MARKER_SHAPES: { id: MarkerShape; label: string }[] = [
-	{ id: "circle", label: "Circle" },
-	{ id: "diamond", label: "Diamond" },
-	{ id: "star", label: "Star" },
-	{ id: "rect", label: "Rectangle" },
-];
 
 const BUILTIN_PROPERTIES = [
 	{ value: "file.tags", label: "Tags" },
@@ -636,43 +630,109 @@ export class TimelineSettingTab extends PluginSettingTab {
 				const colorGroup = topFields.createDiv({ cls: "category-field-group" });
 				colorGroup.createDiv({ cls: "category-field-label", text: "Color" });
 
-				// Event indicator shape picker
+				// Event indicator style & Lucide icon picker
 				const shapeGroup = body.createDiv({ cls: "category-field-group" });
 				shapeGroup.createDiv({ cls: "category-field-label", text: "Event indicator" });
-				const shapeList = shapeGroup.createDiv({ cls: "category-shape-list" });
-				const currentShape: MarkerShape = cat.markerShape || "circle";
 
-				for (const s of MARKER_SHAPES) {
-					const optBtn = shapeList.createEl("button", {
-						type: "button",
-						cls: `category-shape-option ${currentShape === s.id ? "is-selected" : ""}`,
-						title: s.label,
-					});
-					optBtn.style.setProperty("--shape-color", cat.color || "var(--interactive-accent)");
-					const previewWrap = optBtn.createSpan({ cls: "category-shape-preview-wrap" });
-					previewWrap.createSpan({
-						cls: `category-shape-preview is-shape-${s.id}`,
-					});
-					optBtn.createSpan({ cls: "category-shape-label", text: s.label });
-					optBtn.onclick = async () => {
-						cat.markerShape = s.id;
-						await this.plugin.saveSettings();
-						this.renderCategorySettings(container);
-					};
+				const currentStyle: MarkerStyle = cat.markerStyle || "filled";
+				const currentIcon: string = cat.markerIcon || "dot";
+
+				const indicatorRow = shapeGroup.createDiv({ cls: "category-indicator-inline-row" });
+				const contrastColor = getContrastingIconColor(cat.color || "var(--interactive-accent)");
+
+				// 1. Circle button
+				const circleBtn = indicatorRow.createEl("button", {
+					type: "button",
+					cls: `category-shape-option ${currentIcon === "dot" ? "is-selected" : ""}`,
+					title: "Circle (default)",
+				});
+				circleBtn.style.setProperty("--shape-color", cat.color || "var(--interactive-accent)");
+				circleBtn.style.setProperty("--shape-contrast", contrastColor);
+				const circlePreview = circleBtn.createSpan({
+					cls: `category-icon-preview is-style-${currentStyle} is-dot-only`,
+				});
+				if (currentStyle === "outlined") {
+					setIcon(circlePreview, "circle");
 				}
+				circleBtn.createSpan({ cls: "category-shape-label", text: "Circle" });
+				circleBtn.onclick = async () => {
+					cat.markerIcon = "dot";
+					await this.plugin.saveSettings();
+					this.renderCategorySettings(container);
+				};
+
+				indicatorRow.createSpan({ cls: "category-indicator-divider", text: "|" });
+
+				// 2. Lucide with icon name: <icon-preview> [input field]
+				const customIconWrap = indicatorRow.createDiv({
+					cls: `category-custom-icon-inline ${currentIcon !== "dot" ? "is-selected" : ""}`,
+				});
+				customIconWrap.createSpan({
+					cls: "category-custom-icon-label",
+					text: "Lucide with icon name:",
+				});
+				const customPreview = customIconWrap.createSpan({
+					cls: `category-icon-preview is-style-${currentStyle} ${
+						currentIcon === "dot" ? "is-dot-only" : ""
+					}`,
+				});
+				customPreview.style.setProperty("--shape-color", cat.color || "var(--interactive-accent)");
+				customPreview.style.setProperty("--shape-contrast", contrastColor);
+				if (currentIcon !== "dot") {
+					setIcon(customPreview, currentIcon);
+				} else if (currentStyle === "outlined") {
+					setIcon(customPreview, "circle");
+				}
+
+				const customIconInput = customIconWrap.createEl("input", {
+					type: "text",
+					cls: "category-custom-icon-input",
+					value: currentIcon === "dot" ? "" : currentIcon,
+				});
+				customIconInput.placeholder = "e.g. cake, star, flag, rocket";
+				customIconInput.oninput = async () => {
+					const val = customIconInput.value.trim().toLowerCase() || "dot";
+					cat.markerIcon = val;
+					circleBtn.toggleClass("is-selected", val === "dot");
+					customIconWrap.toggleClass("is-selected", val !== "dot");
+					customPreview.empty();
+					customPreview.toggleClass("is-dot-only", val === "dot");
+					if (val !== "dot") {
+						setIcon(customPreview, val);
+					} else if (currentStyle === "outlined") {
+						setIcon(customPreview, "circle");
+					}
+					await this.plugin.saveSettings();
+				};
 
 				this.renderColorControl(colorGroup, cat.color, async (newColor) => {
 					cat.color = newColor;
 					headerSwatch.style.backgroundColor = newColor;
 					headerPicker.value = this.resolveHexForPicker(newColor);
-					shapeList.querySelectorAll<HTMLElement>(".category-shape-option").forEach((el) => {
-						el.style.setProperty("--shape-color", newColor);
-					});
+					const nextContrast = getContrastingIconColor(newColor);
+					shapeGroup
+						.querySelectorAll<HTMLElement>(".category-shape-option, .category-icon-preview")
+						.forEach((el) => {
+							el.style.setProperty("--shape-color", newColor);
+							el.style.setProperty("--shape-contrast", nextContrast);
+						});
 					await this.plugin.saveSettings();
 				});
 
-				// Category options row (alias label & recurring options)
+				// Category options row (outlined icon style, alias label & recurring options)
 				const recurRow = body.createDiv({ cls: "category-recurring-row" });
+
+				const styleLabel = recurRow.createEl("label", { cls: "category-checkbox-label" });
+				const styleCheck = styleLabel.createEl("input", { type: "checkbox" });
+				styleCheck.checked = currentStyle === "outlined";
+				styleLabel.createSpan({
+					text: "Outlined icon with contour knockout (uncheck for filled category-colored badge)",
+				});
+				styleCheck.onchange = async () => {
+					cat.markerStyle = styleCheck.checked ? "outlined" : "filled";
+					await this.plugin.saveSettings();
+					this.renderCategorySettings(container);
+				};
 
 				const aliasLabel = recurRow.createEl("label", { cls: "category-checkbox-label" });
 				const aliasCheck = aliasLabel.createEl("input", { type: "checkbox" });
@@ -704,7 +764,7 @@ export class TimelineSettingTab extends PluginSettingTab {
 					const diffCheck = diffLabel.createEl("input", { type: "checkbox" });
 					diffCheck.checked = cat.differentiateInitial ?? false;
 					diffLabel.createSpan({
-						text: "Differentiate initial event (hollow outline marker, ★ origin badge, and \"<Name> born\" for birthdays)",
+						text: "Differentiate initial event (flips Filled ↔ Outlined style, ★ origin badge, and \"<Name> born\" for birthdays)",
 					});
 					diffCheck.onchange = async () => {
 						cat.differentiateInitial = diffCheck.checked;

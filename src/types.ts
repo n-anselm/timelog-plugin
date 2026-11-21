@@ -1,6 +1,7 @@
 import { TFile } from "obsidian";
 
 export type MarkerShape = "circle" | "diamond" | "star" | "rect";
+export type MarkerStyle = "filled" | "outlined";
 
 export interface TimelineEvent {
 	file: TFile;
@@ -15,6 +16,8 @@ export interface TimelineEvent {
 	categoryName: string | null;
 	color: string;
 	markerShape?: MarkerShape;
+	markerIcon?: string; // "dot" or any Lucide icon name
+	markerStyle?: MarkerStyle; // "filled" (category badge) | "outlined" (raw Lucide with bg knockout)
 	description: string;
 	imageUrl: string | null;
 	isRecurring?: boolean;
@@ -50,6 +53,8 @@ export interface CategoryConfig {
 	tag?: string; // legacy v1.0 field migrated to conditions
 	color: string;
 	markerShape?: MarkerShape;
+	markerIcon?: string;
+	markerStyle?: MarkerStyle;
 	enabled: boolean;
 	useAliasAsLabel?: boolean;
 	recurring?: boolean;
@@ -173,7 +178,64 @@ export function normalizeCategoryConfig(cat: CategoryConfig): CategoryConfig {
 	if (!cat.markerShape) {
 		cat.markerShape = "circle";
 	}
+	if (!cat.markerIcon) {
+		if (cat.markerShape === "diamond") cat.markerIcon = "diamond";
+		else if (cat.markerShape === "star") cat.markerIcon = "star";
+		else if (cat.markerShape === "rect") cat.markerIcon = "rectangle-vertical";
+		else cat.markerIcon = "dot";
+	}
+	if (!cat.markerStyle) {
+		cat.markerStyle = "filled";
+	}
 	return cat;
+}
+
+const contrastCache = new Map<string, string>();
+
+export function getContrastingIconColor(color: string): string {
+	const key = (color || "").trim();
+	const cached = contrastCache.get(key);
+	if (cached) return cached;
+
+	let r = 59,
+		g = 130,
+		b = 246;
+	const hex6 = key.match(/^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/);
+	const hex3 = key.match(/^#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])$/);
+	if (hex6) {
+		r = parseInt(hex6[1], 16);
+		g = parseInt(hex6[2], 16);
+		b = parseInt(hex6[3], 16);
+	} else if (hex3) {
+		r = parseInt(hex3[1] + hex3[1], 16);
+		g = parseInt(hex3[2] + hex3[2], 16);
+		b = parseInt(hex3[3] + hex3[3], 16);
+	} else if (typeof document !== "undefined") {
+		const probe = document.createElement("div");
+		probe.style.display = "none";
+		probe.style.color = key || "var(--interactive-accent)";
+		document.body.appendChild(probe);
+		const computed = getComputedStyle(probe).color;
+		probe.remove();
+		const m = computed.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+		if (m) {
+			r = parseInt(m[1], 10);
+			g = parseInt(m[2], 10);
+			b = parseInt(m[3], 10);
+		}
+	}
+
+	// Relative luminance (sRGB)
+	const toLinear = (c: number) => {
+		const s = c / 255;
+		return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+	};
+	const lum = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+	const result = lum > 0.42 ? "#111111" : "#ffffff";
+	if (!key.startsWith("var(")) {
+		contrastCache.set(key, result);
+	}
+	return result;
 }
 
 export const DEFAULT_SETTINGS: TimelineSettings = {

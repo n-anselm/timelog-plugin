@@ -1,5 +1,12 @@
 import { App, Menu, TFile, setIcon } from "obsidian";
-import { TimelineEvent, TimelineSettings, parseDurationToDays } from "../types";
+import {
+	MarkerStyle,
+	TimelineEvent,
+	TimelineSettings,
+	getContrastingIconColor,
+	normalizeCategoryConfig,
+	parseDurationToDays,
+} from "../types";
 
 interface TimelineCluster {
 	events: TimelineEvent[];
@@ -242,16 +249,27 @@ export class HorizontalTimelineView {
 
 		// Middle: Category Filter Pills
 		const filterGroup = this.toolbarEl.createDiv({ cls: "timeline-toolbar-group timeline-categories-group" });
-		for (const cat of this.settings.categories) {
+		for (const rawCat of this.settings.categories) {
+			const cat = normalizeCategoryConfig(rawCat);
 			if (!cat.enabled) continue;
 			const isHidden = this.activeHiddenCategoryIds.has(cat.id);
 			const pill = filterGroup.createDiv({
 				cls: `timeline-category-pill ${isHidden ? "is-hidden" : ""}`,
 			});
 
-			const shape = cat.markerShape || "circle";
-			const dot = pill.createSpan({ cls: `category-dot is-shape-${shape}` });
-			dot.style.backgroundColor = cat.color;
+			const iconId = cat.markerIcon || "dot";
+			const style: MarkerStyle = cat.markerStyle || "filled";
+			const contrast = getContrastingIconColor(cat.color);
+			const dot = pill.createSpan({
+				cls: `category-dot is-style-${style} ${iconId === "dot" ? "is-dot-only" : "has-lucide-icon"}`,
+			});
+			dot.style.setProperty("--event-color", cat.color);
+			dot.style.setProperty("--event-contrast", contrast);
+			if (iconId !== "dot") {
+				setIcon(dot, iconId);
+			} else if (style === "outlined") {
+				setIcon(dot, "circle");
+			}
 
 			pill.createSpan({ text: cat.name, cls: "category-name" });
 
@@ -728,14 +746,18 @@ export class HorizontalTimelineView {
 			}
 
 			// EVENT CONTAINER
+			const contrastColor = getContrastingIconColor(ev.color);
+			const iconId = ev.markerIcon || "dot";
+			const markerStyle: MarkerStyle = ev.markerStyle || "filled";
 			const eventEl = stageEl.createDiv({
 				cls: `timeline-event-item ${ev.isRange ? "is-range" : "is-point"}`,
 			});
 			eventEl.style.setProperty("--event-color", ev.color);
+			eventEl.style.setProperty("--event-contrast", contrastColor);
 
 			// 1. MARKER ON CENTRAL AXIS
 			if (ev.isRange) {
-				// Multi-day Bar directly on the line
+				// Multi-day Bar directly on the line, starting with the category icon/marker at the start of the bar
 				eventEl.style.left = `${startX}px`;
 				eventEl.style.width = `${widthPx}px`;
 
@@ -743,20 +765,31 @@ export class HorizontalTimelineView {
 				bar.style.height = `${barHeightPx}px`;
 				bar.style.backgroundColor = ev.color;
 
+				if (iconId !== "dot" || markerStyle === "outlined") {
+					const startIconEl = eventEl.createDiv({
+						cls: `timeline-event-dot is-range-start-marker is-style-${markerStyle} ${
+							iconId === "dot" ? "is-dot-only" : "has-lucide-icon"
+						}`,
+					});
+					this.populateMarkerIcon(startIconEl, iconId, markerStyle);
+				}
+
 				if (showTextInBar && widthPx > 50 && effectiveLabelMode !== "hidden") {
-					bar.createSpan({ text: ev.title, cls: "event-bar-label" });
+					const barLabel = bar.createSpan({ text: ev.title, cls: "event-bar-label" });
+					if (iconId !== "dot" || markerStyle === "outlined") {
+						barLabel.addClass("has-start-marker");
+					}
 				}
 			} else {
 				// Single-day Marker directly on the line
 				eventEl.style.left = `${centerX}px`;
 
-				const shape = ev.markerShape || "circle";
 				const dot = eventEl.createDiv({
-					cls: `timeline-event-dot is-shape-${shape} ${
-						ev.isInitialDifferentiated ? "is-initial-hollow" : ""
-					}`,
+					cls: `timeline-event-dot is-style-${markerStyle} ${
+						iconId === "dot" ? "is-dot-only" : "has-lucide-icon"
+					} ${ev.isInitialDifferentiated ? "is-initial-differentiated" : ""}`,
 				});
-				dot.style.backgroundColor = ev.color;
+				this.populateMarkerIcon(dot, iconId, markerStyle);
 			}
 
 			// 2. STEM & LABEL IF NOT HIDDEN
@@ -877,6 +910,28 @@ export class HorizontalTimelineView {
 			eventEl.onmouseleave = () => {
 				this.scheduleHideTooltip();
 			};
+		}
+	}
+
+	private populateMarkerIcon(el: HTMLElement, iconId: string, style: MarkerStyle) {
+		const effectiveIcon = iconId !== "dot" ? iconId : style === "outlined" ? "circle" : "";
+		if (!effectiveIcon) return;
+
+		setIcon(el, effectiveIcon);
+		let fgSvg = el.querySelector("svg");
+		if (!fgSvg) {
+			setIcon(el, "circle");
+			fgSvg = el.querySelector("svg");
+		}
+		if (!fgSvg) return;
+
+		fgSvg.classList.add("lucide-fg-icon");
+		if (style === "outlined") {
+			const bgSvg = fgSvg.cloneNode(true) as SVGElement;
+			bgSvg.classList.remove("lucide-fg-icon");
+			bgSvg.classList.add("lucide-knockout-contour");
+			bgSvg.setAttribute("aria-hidden", "true");
+			el.insertBefore(bgSvg, fgSvg);
 		}
 	}
 
@@ -1109,14 +1164,17 @@ export class HorizontalTimelineView {
 		const listEl = this.tooltipEl.createDiv({ cls: "tooltip-cluster-list" });
 		for (const ev of cluster.events) {
 			const item = listEl.createDiv({ cls: "tooltip-cluster-item" });
-			const shape = ev.markerShape || "circle";
+			const iconId = ev.markerIcon || "dot";
+			const markerStyle: MarkerStyle = ev.markerStyle || "filled";
+			const contrastColor = getContrastingIconColor(ev.color);
 			const dot = item.createSpan({
-				cls: `tooltip-item-dot is-shape-${shape} ${
-					ev.isInitialDifferentiated ? "is-initial-hollow" : ""
+				cls: `tooltip-item-dot is-style-${markerStyle} ${
+					iconId === "dot" ? "is-dot-only" : "has-lucide-icon"
 				}`,
 			});
-			dot.style.backgroundColor = ev.color;
 			dot.style.setProperty("--event-color", ev.color);
+			dot.style.setProperty("--event-contrast", contrastColor);
+			this.populateMarkerIcon(dot, iconId, markerStyle);
 
 			const titleSpan = item.createSpan({ cls: "tooltip-item-title" });
 			if (ev.isInitialDifferentiated) {

@@ -364,6 +364,8 @@ export class TimelineIndexer {
 		const bdaySuffix = baseTitle.endsWith("s") || baseTitle.endsWith("S") ? "' birthday" : "'s birthday";
 
 		const markerShape = matchedCategory?.markerShape || "circle";
+		const markerIcon = matchedCategory?.markerIcon || "dot";
+		const baseMarkerStyle = matchedCategory?.markerStyle || "filled";
 
 		// Recurring yearly generation
 		if (matchedCategory?.recurring) {
@@ -400,6 +402,11 @@ export class TimelineIndexer {
 
 				const occurrenceYears = yr - originYear;
 				const isInitialDiff = diffInitial && occurrenceYears === 0;
+				const effectiveStyle = isInitialDiff
+					? baseMarkerStyle === "filled"
+						? "outlined"
+						: "filled"
+					: baseMarkerStyle;
 				let occTitle = baseTitle;
 				if (isBday) {
 					occTitle = isInitialDiff ? `${baseTitle} born` : `${baseTitle}${bdaySuffix}`;
@@ -419,6 +426,8 @@ export class TimelineIndexer {
 					categoryName: matchedCategory.name,
 					color,
 					markerShape,
+					markerIcon,
+					markerStyle: effectiveStyle,
 					description,
 					imageUrl,
 					isRecurring: true,
@@ -451,6 +460,8 @@ export class TimelineIndexer {
 				categoryName: matchedCategory?.name || null,
 				color,
 				markerShape,
+				markerIcon,
+				markerStyle: baseMarkerStyle,
 				description,
 				imageUrl,
 			},
