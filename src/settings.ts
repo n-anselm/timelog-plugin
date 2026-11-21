@@ -4,8 +4,16 @@ import {
 	CategoryConfig,
 	ConditionOperator,
 	FilterCondition,
+	MarkerShape,
 	normalizeCategoryConfig,
 } from "./types";
+
+const MARKER_SHAPES: { id: MarkerShape; label: string }[] = [
+	{ id: "circle", label: "Circle" },
+	{ id: "diamond", label: "Diamond" },
+	{ id: "star", label: "Star" },
+	{ id: "rect", label: "Rectangle" },
+];
 
 const BUILTIN_PROPERTIES = [
 	{ value: "file.tags", label: "Tags" },
@@ -597,10 +605,39 @@ export class TimelineSettingTab extends PluginSettingTab {
 				// Color input + swatch
 				const colorGroup = topFields.createDiv({ cls: "category-field-group" });
 				colorGroup.createDiv({ cls: "category-field-label", text: "Color" });
+
+				// Event indicator shape picker
+				const shapeGroup = body.createDiv({ cls: "category-field-group" });
+				shapeGroup.createDiv({ cls: "category-field-label", text: "Event indicator" });
+				const shapeList = shapeGroup.createDiv({ cls: "category-shape-list" });
+				const currentShape: MarkerShape = cat.markerShape || "circle";
+
+				for (const s of MARKER_SHAPES) {
+					const optBtn = shapeList.createEl("button", {
+						type: "button",
+						cls: `category-shape-option ${currentShape === s.id ? "is-selected" : ""}`,
+						title: s.label,
+					});
+					optBtn.style.setProperty("--shape-color", cat.color || "var(--interactive-accent)");
+					const previewWrap = optBtn.createSpan({ cls: "category-shape-preview-wrap" });
+					previewWrap.createSpan({
+						cls: `category-shape-preview is-shape-${s.id}`,
+					});
+					optBtn.createSpan({ cls: "category-shape-label", text: s.label });
+					optBtn.onclick = async () => {
+						cat.markerShape = s.id;
+						await this.plugin.saveSettings();
+						this.renderCategorySettings(container);
+					};
+				}
+
 				this.renderColorControl(colorGroup, cat.color, async (newColor) => {
 					cat.color = newColor;
 					headerSwatch.style.backgroundColor = newColor;
 					headerPicker.value = this.resolveHexForPicker(newColor);
+					shapeList.querySelectorAll<HTMLElement>(".category-shape-option").forEach((el) => {
+						el.style.setProperty("--shape-color", newColor);
+					});
 					await this.plugin.saveSettings();
 				});
 
@@ -626,7 +663,7 @@ export class TimelineSettingTab extends PluginSettingTab {
 					const diffCheck = diffLabel.createEl("input", { type: "checkbox" });
 					diffCheck.checked = cat.differentiateInitial ?? false;
 					diffLabel.createSpan({
-						text: "Differentiate initial event (diamond marker, ★ origin badge, and \"<Name> born\" for birthdays)",
+						text: "Differentiate initial event (hollow outline marker, ★ origin badge, and \"<Name> born\" for birthdays)",
 					});
 					diffCheck.onchange = async () => {
 						cat.differentiateInitial = diffCheck.checked;

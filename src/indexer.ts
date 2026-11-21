@@ -363,6 +363,8 @@ export class TimelineIndexer {
 		const diffInitial = Boolean(matchedCategory?.recurring && matchedCategory?.differentiateInitial);
 		const bdaySuffix = baseTitle.endsWith("s") || baseTitle.endsWith("S") ? "' birthday" : "'s birthday";
 
+		const markerShape = matchedCategory?.markerShape || "circle";
+
 		// Recurring yearly generation
 		if (matchedCategory?.recurring) {
 			const startDateObj = new Date(parsedStart.timestamp);
@@ -416,6 +418,7 @@ export class TimelineIndexer {
 					categoryId: matchedCategory.id,
 					categoryName: matchedCategory.name,
 					color,
+					markerShape,
 					description,
 					imageUrl,
 					isRecurring: true,
@@ -447,6 +450,7 @@ export class TimelineIndexer {
 				categoryId: matchedCategory?.id || null,
 				categoryName: matchedCategory?.name || null,
 				color,
+				markerShape,
 				description,
 				imageUrl,
 			},

@@ -249,7 +249,8 @@ export class HorizontalTimelineView {
 				cls: `timeline-category-pill ${isHidden ? "is-hidden" : ""}`,
 			});
 
-			const dot = pill.createSpan({ cls: "category-dot" });
+			const shape = cat.markerShape || "circle";
+			const dot = pill.createSpan({ cls: `category-dot is-shape-${shape}` });
 			dot.style.backgroundColor = cat.color;
 
 			pill.createSpan({ text: cat.name, cls: "category-name" });
@@ -739,11 +740,14 @@ export class HorizontalTimelineView {
 					bar.createSpan({ text: ev.title, cls: "event-bar-label" });
 				}
 			} else {
-				// Single-day Dot directly on the line (diamond if initial differentiated occurrence)
+				// Single-day Marker directly on the line
 				eventEl.style.left = `${centerX}px`;
 
+				const shape = ev.markerShape || "circle";
 				const dot = eventEl.createDiv({
-					cls: `timeline-event-dot ${ev.isInitialDifferentiated ? "is-initial-diamond" : ""}`,
+					cls: `timeline-event-dot is-shape-${shape} ${
+						ev.isInitialDifferentiated ? "is-initial-hollow" : ""
+					}`,
 				});
 				dot.style.backgroundColor = ev.color;
 			}
@@ -1098,10 +1102,14 @@ export class HorizontalTimelineView {
 		const listEl = this.tooltipEl.createDiv({ cls: "tooltip-cluster-list" });
 		for (const ev of cluster.events) {
 			const item = listEl.createDiv({ cls: "tooltip-cluster-item" });
+			const shape = ev.markerShape || "circle";
 			const dot = item.createSpan({
-				cls: `tooltip-item-dot ${ev.isInitialDifferentiated ? "is-initial-diamond" : ""}`,
+				cls: `tooltip-item-dot is-shape-${shape} ${
+					ev.isInitialDifferentiated ? "is-initial-hollow" : ""
+				}`,
 			});
 			dot.style.backgroundColor = ev.color;
+			dot.style.setProperty("--event-color", ev.color);
 
 			const titleSpan = item.createSpan({ cls: "tooltip-item-title" });
 			if (ev.isInitialDifferentiated) {

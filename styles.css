@@ -151,10 +151,40 @@
 }
 
 .category-dot {
-	width: 8px;
-	height: 8px;
+	width: 9px;
+	height: 9px;
 	border-radius: 50%;
 	display: inline-block;
+	flex-shrink: 0;
+}
+
+.category-dot.is-shape-diamond {
+	border-radius: 2px;
+	transform: rotate(45deg);
+}
+
+.category-dot.is-shape-star {
+	width: 11px;
+	height: 11px;
+	border-radius: 0;
+	clip-path: polygon(
+		50% 0%,
+		63% 36%,
+		100% 38%,
+		71% 61%,
+		81% 98%,
+		50% 77%,
+		19% 98%,
+		29% 61%,
+		0% 38%,
+		37% 36%
+	);
+}
+
+.category-dot.is-shape-rect {
+	width: 6px;
+	height: 11px;
+	border-radius: 2px;
 }
 
 .category-name {
@@ -444,7 +474,7 @@
 	z-index: 12;
 }
 
-/* Single-Day Dot directly ON the line */
+/* Single-Day Marker directly ON the line */
 .timeline-event-dot {
 	position: absolute;
 	top: 50%;
@@ -458,7 +488,7 @@
 	cursor: pointer;
 	pointer-events: auto;
 	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
-	transition: transform 0.15s ease, box-shadow 0.15s ease;
+	transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 	z-index: 5;
 }
 
@@ -467,14 +497,67 @@
 	box-shadow: 0 0 12px color-mix(in srgb, var(--event-color) 80%, transparent) !important;
 }
 
-.timeline-event-dot.is-initial-diamond {
+/* Diamond marker */
+.timeline-event-dot.is-shape-diamond {
+	width: 15px;
+	height: 15px;
 	border-radius: 3px;
 	transform: translate(-50%, -50%) rotate(45deg);
 }
 
-.timeline-event-dot.is-initial-diamond:hover {
+.timeline-event-dot.is-shape-diamond:hover {
 	transform: translate(-50%, -50%) rotate(45deg) scale(1.35) !important;
 	box-shadow: 0 0 12px color-mix(in srgb, var(--event-color) 80%, transparent) !important;
+}
+
+/* 5-Point Star marker */
+.timeline-event-dot.is-shape-star {
+	width: 20px;
+	height: 20px;
+	border-radius: 0;
+	border: none;
+	box-shadow: none;
+	filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+	clip-path: polygon(
+		50% 0%,
+		63% 36%,
+		100% 38%,
+		71% 61%,
+		81% 98%,
+		50% 77%,
+		19% 98%,
+		29% 61%,
+		0% 38%,
+		37% 36%
+	);
+}
+
+.timeline-event-dot.is-shape-star:hover {
+	transform: translate(-50%, -50%) scale(1.35) !important;
+	box-shadow: none !important;
+	filter: drop-shadow(0 0 8px color-mix(in srgb, var(--event-color) 85%, transparent)) !important;
+}
+
+/* Vertical Rectangle marker */
+.timeline-event-dot.is-shape-rect {
+	width: 11px;
+	height: 22px;
+	border-radius: 3px;
+}
+
+/* Hollow / Outlined Initial Recurring Event variation */
+.timeline-event-dot.is-initial-hollow:not(.is-shape-star) {
+	background-color: var(--background-primary) !important;
+	border: 3.5px solid var(--event-color);
+	box-shadow: 0 0 0 2px var(--background-primary), 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.timeline-event-dot.is-shape-star.is-initial-hollow::after {
+	content: "";
+	position: absolute;
+	inset: 4.5px;
+	background-color: var(--background-primary);
+	clip-path: inherit;
 }
 
 /* Multi-Day Bar directly ON the line */
@@ -704,9 +787,51 @@
 	font-weight: 700;
 }
 
-.tooltip-item-dot.is-initial-diamond {
+.tooltip-item-dot {
+	position: relative;
+	box-sizing: border-box;
+}
+
+.tooltip-item-dot.is-shape-diamond {
 	border-radius: 2px;
 	transform: rotate(45deg);
+}
+
+.tooltip-item-dot.is-shape-star {
+	width: 11px;
+	height: 11px;
+	border-radius: 0;
+	clip-path: polygon(
+		50% 0%,
+		63% 36%,
+		100% 38%,
+		71% 61%,
+		81% 98%,
+		50% 77%,
+		19% 98%,
+		29% 61%,
+		0% 38%,
+		37% 36%
+	);
+}
+
+.tooltip-item-dot.is-shape-rect {
+	width: 6px;
+	height: 12px;
+	border-radius: 2px;
+}
+
+.tooltip-item-dot.is-initial-hollow:not(.is-shape-star) {
+	background-color: var(--background-primary) !important;
+	border: 2px solid var(--event-color, var(--interactive-accent));
+}
+
+.tooltip-item-dot.is-shape-star.is-initial-hollow::after {
+	content: "";
+	position: absolute;
+	inset: 2.5px;
+	background-color: var(--background-primary);
+	clip-path: inherit;
 }
 
 .tooltip-category-badge {
@@ -925,6 +1050,94 @@
 	background: var(--background-primary);
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 6px;
+}
+
+.category-shape-list {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.category-shape-option {
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
+	padding: 6px 12px;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 6px;
+	cursor: pointer;
+	color: var(--text-normal);
+	font-size: 12.5px;
+	transition: all 0.15s ease;
+	--shape-color: var(--interactive-accent);
+}
+
+.category-shape-option:hover {
+	border-color: var(--text-muted);
+	background: var(--background-modifier-hover);
+}
+
+.category-shape-option.is-selected {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 1px var(--interactive-accent);
+	background: color-mix(in srgb, var(--interactive-accent) 12%, var(--background-primary));
+}
+
+.category-shape-preview-wrap {
+	width: 18px;
+	height: 18px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.category-shape-preview {
+	display: inline-block;
+	background-color: var(--shape-color, var(--interactive-accent));
+	flex-shrink: 0;
+}
+
+.category-shape-preview.is-shape-circle {
+	width: 13px;
+	height: 13px;
+	border-radius: 50%;
+}
+
+.category-shape-preview.is-shape-diamond {
+	width: 12px;
+	height: 12px;
+	border-radius: 2.5px;
+	transform: rotate(45deg);
+}
+
+.category-shape-preview.is-shape-star {
+	width: 16px;
+	height: 16px;
+	clip-path: polygon(
+		50% 0%,
+		63% 36%,
+		100% 38%,
+		71% 61%,
+		81% 98%,
+		50% 77%,
+		19% 98%,
+		29% 61%,
+		0% 38%,
+		37% 36%
+	);
+}
+
+.category-shape-preview.is-shape-rect {
+	width: 9px;
+	height: 16px;
+	border-radius: 2.5px;
+}
+
+.category-shape-label {
+	font-weight: 500;
 }
 
 .category-checkbox-label {

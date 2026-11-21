@@ -1,5 +1,7 @@
 import { TFile } from "obsidian";
 
+export type MarkerShape = "circle" | "diamond" | "star" | "rect";
+
 export interface TimelineEvent {
 	file: TFile;
 	title: string;
@@ -12,6 +14,7 @@ export interface TimelineEvent {
 	categoryId: string | null;
 	categoryName: string | null;
 	color: string;
+	markerShape?: MarkerShape;
 	description: string;
 	imageUrl: string | null;
 	isRecurring?: boolean;
@@ -46,6 +49,7 @@ export interface CategoryConfig {
 	name: string;
 	tag?: string; // legacy v1.0 field migrated to conditions
 	color: string;
+	markerShape?: MarkerShape;
 	enabled: boolean;
 	recurring?: boolean;
 	isBirthday?: boolean;
@@ -159,6 +163,9 @@ export function normalizeCategoryConfig(cat: CategoryConfig): CategoryConfig {
 	}
 	if (cat.differentiateInitial === undefined) {
 		cat.differentiateInitial = false;
+	}
+	if (!cat.markerShape) {
+		cat.markerShape = "circle";
 	}
 	return cat;
 }
