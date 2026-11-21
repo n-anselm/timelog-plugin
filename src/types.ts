@@ -14,6 +14,9 @@ export interface TimelineEvent {
 	color: string;
 	description: string;
 	imageUrl: string | null;
+	isRecurring?: boolean;
+	originYear?: number;
+	occurrenceYears?: number;
 }
 
 export type ConditionOperator =
@@ -42,6 +45,8 @@ export interface CategoryConfig {
 	tag?: string; // legacy v1.0 field migrated to conditions
 	color: string;
 	enabled: boolean;
+	recurring?: boolean;
+	isBirthday?: boolean;
 	matchMode?: "all" | "any";
 	conditions?: FilterCondition[];
 }
@@ -53,6 +58,7 @@ export interface TimelineSettings {
 	filterConditions: FilterCondition[];
 	startDateProperties: string[];
 	endDateProperties: string[];
+	recurringYearsFuture: number;
 	categories: CategoryConfig[];
 	showUncategorizedNotes: boolean;
 	defaultColor: string;
@@ -142,6 +148,12 @@ export function normalizeCategoryConfig(cat: CategoryConfig): CategoryConfig {
 	if (!cat.matchMode) {
 		cat.matchMode = "all";
 	}
+	if (cat.recurring === undefined) {
+		cat.recurring = false;
+	}
+	if (cat.isBirthday === undefined) {
+		cat.isBirthday = false;
+	}
 	return cat;
 }
 
@@ -152,6 +164,7 @@ export const DEFAULT_SETTINGS: TimelineSettings = {
 	filterConditions: [],
 	startDateProperties: ["date", "startDate", "start"],
 	endDateProperties: ["date-end", "endDate", "end"],
+	recurringYearsFuture: 3,
 	categories: DEFAULT_CATEGORIES,
 	showUncategorizedNotes: false,
 	defaultColor: "var(--interactive-accent)",

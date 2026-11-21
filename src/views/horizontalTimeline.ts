@@ -1024,6 +1024,15 @@ export class HorizontalTimelineView {
 			});
 		}
 
+		// Recurrence year count & origin year on subsequent occurrences
+		if (ev.isRecurring && ev.occurrenceYears && ev.occurrenceYears > 0 && ev.originYear) {
+			const yrsLabel = ev.occurrenceYears === 1 ? "1 year" : `${ev.occurrenceYears} years`;
+			this.tooltipEl.createDiv({
+				cls: "tooltip-recurrence-info",
+				text: `${yrsLabel} (since ${ev.originYear})`,
+			});
+		}
+
 		if (ev.categoryName) {
 			const badge = this.tooltipEl.createSpan({
 				cls: "tooltip-category-badge",
@@ -1075,9 +1084,13 @@ export class HorizontalTimelineView {
 			item.createSpan({ text: ev.title, cls: "tooltip-item-title" });
 
 			const startFormatted = this.formatDateForDisplay(ev.startDate);
-			const dateStr = ev.isRange && ev.endDate 
+			let dateStr = ev.isRange && ev.endDate 
 				? `${startFormatted} → ${this.formatDateForDisplay(ev.endDate)}` 
 				: startFormatted;
+			if (ev.isRecurring && ev.occurrenceYears && ev.occurrenceYears > 0 && ev.originYear) {
+				const yrsLabel = ev.occurrenceYears === 1 ? "1 year" : `${ev.occurrenceYears} years`;
+				dateStr += ` · ${yrsLabel} (since ${ev.originYear})`;
+			}
 			item.createSpan({ text: dateStr, cls: "tooltip-item-date" });
 
 			item.onclick = (e) => {

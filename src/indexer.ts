@@ -26,9 +26,9 @@ export class TimelineIndexer {
 				continue;
 			}
 
-			const event = this.parseFile(file, settings);
-			if (event) {
-				events.push(event);
+			const parsedEvents = this.parseFile(file, settings);
+			if (parsedEvents.length > 0) {
+				events.push(...parsedEvents);
 			}
 		}
 
@@ -257,7 +257,7 @@ export class TimelineIndexer {
 		return conds.every((c) => this.evaluateCondition(file, frontmatter, tags, c));
 	}
 
-	public parseFile(file: TFile, settings: TimelineSettings): TimelineEvent | null {
+	public parseFile(file: TFile, settings: TimelineSettings): TimelineEvent[] {
 		const cache = this.app.metadataCache.getFileCache(file);
 		const frontmatter = cache?.frontmatter;
 
@@ -279,12 +279,12 @@ export class TimelineIndexer {
 		}
 
 		if (!startDateRaw) {
-			return null;
+			return [];
 		}
 
 		const parsedStart = this.parseDate(startDateRaw);
 		if (!parsedStart) {
-			return null;
+			return [];
 		}
 
 		// Extract end date
@@ -320,12 +320,12 @@ export class TimelineIndexer {
 
 		// If the note matches a disabled category (and no enabled category), exclude it
 		if (!matchedCategory && matchesDisabledCategory) {
-			return null;
+			return [];
 		}
 
 		// Hide uncategorized notes unless showUncategorizedNotes is enabled
 		if (!matchedCategory && !(settings.showUncategorizedNotes ?? false)) {
-			return null;
+			return [];
 		}
 
 		let color = settings.defaultColor;
@@ -334,12 +334,6 @@ export class TimelineIndexer {
 		} else if (matchedCategory) {
 			color = matchedCategory.color;
 		}
-
-		// Calculate timestamps: end date covers full day
-		const isRange = parsedEnd !== null && parsedEnd.timestamp > parsedStart.timestamp;
-		const startTimestamp = parsedStart.timestamp;
-		// End timestamp is either the parsedEnd timestamp + 24 hours (inclusive of the end day) or startTimestamp + 24 hours
-		const endTimestamp = isRange && parsedEnd ? parsedEnd.timestamp + 86400000 : startTimestamp + 86400000;
 
 		// Summary description
 		let description = "";
@@ -364,21 +358,104 @@ export class TimelineIndexer {
 			}
 		}
 
-		return {
-			file,
-			title,
-			startDate: parsedStart.dateStr,
-			endDate: isRange && parsedEnd ? parsedEnd.dateStr : null,
-			startTimestamp,
-			endTimestamp,
-			isRange,
-			tags,
-			categoryId: matchedCategory?.id || null,
-			categoryName: matchedCategory?.name || null,
-			color,
-			description,
-			imageUrl,
-		};
+		if (matchedCategory?.recurring && matchedCategory?.isBirthday) {
+			const suffix = title.endsWith("s") || title.endsWith("S") ? "' birthday" : "'s birthday";
+			title = `${title}${suffix}`;
+		}
+
+		// Recurring yearly generation
+		if (matchedCategory?.recurring) {
+			const startDateObj = new Date(parsedStart.timestamp);
+			const originYear = startDateObj.getUTCFullYear();
+			const originMonth = startDateObj.getUTCMonth() + 1; // 1-12
+			const originDay = startDateObj.getUTCDate(); // 1-31
+
+			const currentYear = new Date().getFullYear();
+			const futureHorizon = Math.max(0, settings.recurringYearsFuture ?? 3);
+			let maxTimestampLimit = Date.UTC(currentYear + futureHorizon, 11, 31, 23, 59, 59);
+
+			// If an end date property exists on a recurring event, treat it as the recurrence stop bound
+			const parsedStopBound = parsedEnd
+				? parsedEnd.timestamp
+				: this.parseRecurrenceEndYearBound(endDateRaw);
+			if (parsedStopBound !== null) {
+				maxTimestampLimit = Math.min(maxTimestampLimit, parsedStopBound);
+			}
+
+			const maxYear = new Date(maxTimestampLimit).getUTCFullYear();
+			const pad = (n: number) => (n < 10 ? "0" + n : String(n));
+			const occurrences: TimelineEvent[] = [];
+
+			for (let yr = originYear; yr <= maxYear; yr++) {
+				// Clamp Feb 29 to Feb 28 on non-leap years
+				const daysInMonth = new Date(Date.UTC(yr, originMonth, 0)).getUTCDate();
+				const dayForYear = Math.min(originDay, daysInMonth);
+				const occTimestamp = Date.UTC(yr, originMonth - 1, dayForYear);
+
+				if (occTimestamp < parsedStart.timestamp || occTimestamp > maxTimestampLimit) {
+					continue;
+				}
+
+				const occDateStr = `${yr}-${pad(originMonth)}-${pad(dayForYear)}`;
+				occurrences.push({
+					file,
+					title,
+					startDate: occDateStr,
+					endDate: null,
+					startTimestamp: occTimestamp,
+					endTimestamp: occTimestamp + 86400000,
+					isRange: false,
+					tags,
+					categoryId: matchedCategory.id,
+					categoryName: matchedCategory.name,
+					color,
+					description,
+					imageUrl,
+					isRecurring: true,
+					originYear,
+					occurrenceYears: yr - originYear,
+				});
+			}
+
+			return occurrences;
+		}
+
+		// Non-recurring event: calculate timestamps (end date covers full day)
+		const isRange = parsedEnd !== null && parsedEnd.timestamp > parsedStart.timestamp;
+		const startTimestamp = parsedStart.timestamp;
+		const endTimestamp = isRange && parsedEnd ? parsedEnd.timestamp + 86400000 : startTimestamp + 86400000;
+
+		return [
+			{
+				file,
+				title,
+				startDate: parsedStart.dateStr,
+				endDate: isRange && parsedEnd ? parsedEnd.dateStr : null,
+				startTimestamp,
+				endTimestamp,
+				isRange,
+				tags,
+				categoryId: matchedCategory?.id || null,
+				categoryName: matchedCategory?.name || null,
+				color,
+				description,
+				imageUrl,
+			},
+		];
+	}
+
+	private parseRecurrenceEndYearBound(raw: any): number | null {
+		if (raw === undefined || raw === null) return null;
+		const str = String(raw).trim();
+		// Support bare 4-digit end year (e.g. "2018") or range like "1950 - 2018"
+		const yearOnly = str.match(/^(\d{4})$/) || str.match(/^\d{4}\s*[-–—]\s*(\d{4})$/);
+		if (yearOnly) {
+			const yr = parseInt(yearOnly[1], 10);
+			if (yr >= 1000 && yr <= 9999) {
+				return Date.UTC(yr, 11, 31, 23, 59, 59);
+			}
+		}
+		return null;
 	}
 
 	private resolveImageUrl(raw: any, sourcePath: string): string | null {

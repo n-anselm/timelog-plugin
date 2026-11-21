@@ -151,7 +151,7 @@ export class TimelineSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("End date properties")
 			.setDesc(
-				"Frontmatter property keys used for multi-day event end dates (comma separated in priority order)."
+				"Frontmatter property keys used for multi-day event end dates, or the stop date for recurring events (comma separated in priority order)."
 			)
 			.addText((text) =>
 				text
@@ -162,6 +162,22 @@ export class TimelineSettingTab extends PluginSettingTab {
 							.split(",")
 							.map((s) => s.trim())
 							.filter((s) => s.length > 0);
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Recurring events future horizon (years)")
+			.setDesc(
+				"How many years past the current year yearly recurring events are generated on the timeline."
+			)
+			.addSlider((slider) =>
+				slider
+					.setLimits(0, 20, 1)
+					.setValue(this.plugin.settings.recurringYearsFuture ?? 3)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.recurringYearsFuture = value;
 						await this.plugin.saveSettings();
 					})
 			);
@@ -520,6 +536,13 @@ export class TimelineSettingTab extends PluginSettingTab {
 				text: cat.name || "Unnamed Category",
 			});
 
+			if (cat.recurring) {
+				header.createSpan({
+					cls: "category-recurring-badge",
+					text: cat.isBirthday ? "Yearly · Birthday" : "Yearly",
+				});
+			}
+
 			// Condition count summary
 			const condCount = cat.conditions?.length || 0;
 			header.createSpan({
@@ -580,6 +603,34 @@ export class TimelineSettingTab extends PluginSettingTab {
 					headerPicker.value = this.resolveHexForPicker(newColor);
 					await this.plugin.saveSettings();
 				});
+
+				// Recurring options row
+				const recurRow = body.createDiv({ cls: "category-recurring-row" });
+
+				const recurLabel = recurRow.createEl("label", { cls: "category-checkbox-label" });
+				const recurCheck = recurLabel.createEl("input", { type: "checkbox" });
+				recurCheck.checked = cat.recurring ?? false;
+				recurLabel.createSpan({ text: "Recurring yearly (repeats on the same month & day every year)" });
+				recurCheck.onchange = async () => {
+					cat.recurring = recurCheck.checked;
+					if (!cat.recurring) {
+						cat.isBirthday = false;
+					}
+					await this.plugin.saveSettings();
+					this.renderCategorySettings(container);
+				};
+
+				if (cat.recurring) {
+					const bdayLabel = recurRow.createEl("label", { cls: "category-checkbox-label is-nested" });
+					const bdayCheck = bdayLabel.createEl("input", { type: "checkbox" });
+					bdayCheck.checked = cat.isBirthday ?? false;
+					bdayLabel.createSpan({ text: "Birthday label format (shows \"<Note Title>'s birthday\")" });
+					bdayCheck.onchange = async () => {
+						cat.isBirthday = bdayCheck.checked;
+						await this.plugin.saveSettings();
+						this.renderCategorySettings(container);
+					};
+				}
 
 				// Match mode (All AND / Any OR)
 				const condHeaderRow = body.createDiv({ cls: "category-conditions-header" });
