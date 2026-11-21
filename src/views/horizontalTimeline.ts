@@ -579,6 +579,8 @@ export class HorizontalTimelineView {
 
 	private renderTimelineLineAndEvents(trackEl: HTMLElement, events: TimelineEvent[]) {
 		const stageEl = trackEl.createDiv({ cls: "timeline-stage" });
+		const indicatorScale = this.settings.indicatorScale ?? 1.0;
+		stageEl.style.setProperty("--indicator-scale", String(indicatorScale));
 
 		// The Single Central Continuous Axis Line
 		stageEl.createDiv({ cls: "timeline-central-axis" });
@@ -616,6 +618,7 @@ export class HorizontalTimelineView {
 			barHeightPx = 6;
 			showTextInBar = false;
 		}
+		barHeightPx = Math.max(3, Math.round(barHeightPx * indicatorScale));
 
 		const dayMs = 86400000;
 
@@ -646,7 +649,7 @@ export class HorizontalTimelineView {
 		// CLUSTERING ALGORITHM:
 		// When events are within clusterDistancePx of each other, group them into a Merged Dot!
 		// At >= 30 px/day (when day columns & labels are visible), same-day events split out instead of staying trapped in a cluster.
-		const clusterDistancePx = 22;
+		const clusterDistancePx = Math.round(22 * indicatorScale);
 		const unclusterSameDay = this.pixelsPerDay >= 30;
 		const clusters: TimelineCluster[] = [];
 

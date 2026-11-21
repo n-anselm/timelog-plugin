@@ -78,6 +78,7 @@ export interface TimelineSettings {
 	zoomPixelsPerDay: number; // e.g. 1 to 140
 	zoomSensitivity: number; // e.g. 0.3 to 2.5
 	zoomAcceleration: boolean;
+	indicatorScale: number; // e.g. 0.5 to 2.5, default 1.0
 	labelMode: "auto" | "vertical" | "hidden" | "horizontal";
 	verticalLabelMaxHeight: number;
 	showToday: boolean;
@@ -194,6 +195,7 @@ export const DEFAULT_SETTINGS: TimelineSettings = {
 	zoomPixelsPerDay: 40,
 	zoomSensitivity: 1.0,
 	zoomAcceleration: true,
+	indicatorScale: 1.0,
 	labelMode: "auto",
 	verticalLabelMaxHeight: 120,
 	showToday: true,

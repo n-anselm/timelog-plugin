@@ -254,6 +254,22 @@ export class TimelineSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Event indicator scale")
+			.setDesc(
+				"Size multiplier for single-day markers and multi-day bar thickness on the timeline (1.0 = default size)."
+			)
+			.addSlider((slider) =>
+				slider
+					.setLimits(0.5, 2.5, 0.1)
+					.setValue(this.plugin.settings.indicatorScale ?? 1.0)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.indicatorScale = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
 			.setName("Label display mode")
 			.setDesc(
 				"Auto switches from hidden (zoomed out) to vertical (medium) to horizontal (zoomed in)."
