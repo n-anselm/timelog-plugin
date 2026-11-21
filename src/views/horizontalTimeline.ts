@@ -623,19 +623,8 @@ export class HorizontalTimelineView {
 			}
 		}
 
-		// Multi-day bar thickness scales down smoothly as user zooms out
-		let barHeightPx = 22;
-		let showTextInBar = false;
-		if (this.pixelsPerDay >= 55) {
-			barHeightPx = 22;
-			showTextInBar = true;
-		} else if (this.pixelsPerDay >= 30) {
-			barHeightPx = 12;
-			showTextInBar = false;
-		} else {
-			barHeightPx = 6;
-			showTextInBar = false;
-		}
+		// Multi-day bar thickness: normal (12px) at >= 30 px/day, very small (6px) when zoomed out
+		let barHeightPx = this.pixelsPerDay >= 30 ? 12 : 6;
 		barHeightPx = Math.max(3, Math.round(barHeightPx * indicatorScale));
 
 		const dayMs = 86400000;
@@ -773,13 +762,6 @@ export class HorizontalTimelineView {
 					});
 					this.populateMarkerIcon(startIconEl, iconId, markerStyle);
 				}
-
-				if (showTextInBar && widthPx > 50 && effectiveLabelMode !== "hidden") {
-					const barLabel = bar.createSpan({ text: ev.title, cls: "event-bar-label" });
-					if (iconId !== "dot" || markerStyle === "outlined") {
-						barLabel.addClass("has-start-marker");
-					}
-				}
 			} else {
 				// Single-day Marker directly on the line
 				eventEl.style.left = `${centerX}px`;
@@ -793,9 +775,7 @@ export class HorizontalTimelineView {
 			}
 
 			// 2. STEM & LABEL IF NOT HIDDEN
-			const needsStemLabel =
-				effectiveLabelMode !== "hidden" &&
-				(!ev.isRange || !showTextInBar || widthPx <= 50);
+			const needsStemLabel = effectiveLabelMode !== "hidden";
 
 			if (needsStemLabel) {
 				const labelAnchorX = ev.isRange ? startX + Math.min(20, widthPx / 2) : centerX;
