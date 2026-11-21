@@ -615,12 +615,25 @@ export class TimelineSettingTab extends PluginSettingTab {
 					cat.recurring = recurCheck.checked;
 					if (!cat.recurring) {
 						cat.isBirthday = false;
+						cat.differentiateInitial = false;
 					}
 					await this.plugin.saveSettings();
 					this.renderCategorySettings(container);
 				};
 
 				if (cat.recurring) {
+					const diffLabel = recurRow.createEl("label", { cls: "category-checkbox-label is-nested" });
+					const diffCheck = diffLabel.createEl("input", { type: "checkbox" });
+					diffCheck.checked = cat.differentiateInitial ?? false;
+					diffLabel.createSpan({
+						text: "Differentiate initial event (diamond marker, ★ origin badge, and \"<Name> born\" for birthdays)",
+					});
+					diffCheck.onchange = async () => {
+						cat.differentiateInitial = diffCheck.checked;
+						await this.plugin.saveSettings();
+						this.renderCategorySettings(container);
+					};
+
 					const bdayLabel = recurRow.createEl("label", { cls: "category-checkbox-label is-nested" });
 					const bdayCheck = bdayLabel.createEl("input", { type: "checkbox" });
 					bdayCheck.checked = cat.isBirthday ?? false;

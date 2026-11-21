@@ -358,10 +358,10 @@ export class TimelineIndexer {
 			}
 		}
 
-		if (matchedCategory?.recurring && matchedCategory?.isBirthday) {
-			const suffix = title.endsWith("s") || title.endsWith("S") ? "' birthday" : "'s birthday";
-			title = `${title}${suffix}`;
-		}
+		const baseTitle = title;
+		const isBday = Boolean(matchedCategory?.recurring && matchedCategory?.isBirthday);
+		const diffInitial = Boolean(matchedCategory?.recurring && matchedCategory?.differentiateInitial);
+		const bdaySuffix = baseTitle.endsWith("s") || baseTitle.endsWith("S") ? "' birthday" : "'s birthday";
 
 		// Recurring yearly generation
 		if (matchedCategory?.recurring) {
@@ -396,10 +396,17 @@ export class TimelineIndexer {
 					continue;
 				}
 
+				const occurrenceYears = yr - originYear;
+				const isInitialDiff = diffInitial && occurrenceYears === 0;
+				let occTitle = baseTitle;
+				if (isBday) {
+					occTitle = isInitialDiff ? `${baseTitle} born` : `${baseTitle}${bdaySuffix}`;
+				}
+
 				const occDateStr = `${yr}-${pad(originMonth)}-${pad(dayForYear)}`;
 				occurrences.push({
 					file,
-					title,
+					title: occTitle,
 					startDate: occDateStr,
 					endDate: null,
 					startTimestamp: occTimestamp,
@@ -413,7 +420,9 @@ export class TimelineIndexer {
 					imageUrl,
 					isRecurring: true,
 					originYear,
-					occurrenceYears: yr - originYear,
+					occurrenceYears,
+					isInitialDifferentiated: isInitialDiff,
+					isBirthday: isBday,
 				});
 			}
 

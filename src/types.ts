@@ -17,6 +17,8 @@ export interface TimelineEvent {
 	isRecurring?: boolean;
 	originYear?: number;
 	occurrenceYears?: number;
+	isInitialDifferentiated?: boolean;
+	isBirthday?: boolean;
 }
 
 export type ConditionOperator =
@@ -47,6 +49,7 @@ export interface CategoryConfig {
 	enabled: boolean;
 	recurring?: boolean;
 	isBirthday?: boolean;
+	differentiateInitial?: boolean;
 	matchMode?: "all" | "any";
 	conditions?: FilterCondition[];
 }
@@ -153,6 +156,9 @@ export function normalizeCategoryConfig(cat: CategoryConfig): CategoryConfig {
 	}
 	if (cat.isBirthday === undefined) {
 		cat.isBirthday = false;
+	}
+	if (cat.differentiateInitial === undefined) {
+		cat.differentiateInitial = false;
 	}
 	return cat;
 }

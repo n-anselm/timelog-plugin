@@ -739,10 +739,12 @@ export class HorizontalTimelineView {
 					bar.createSpan({ text: ev.title, cls: "event-bar-label" });
 				}
 			} else {
-				// Single-day Dot directly on the line
+				// Single-day Dot directly on the line (diamond if initial differentiated occurrence)
 				eventEl.style.left = `${centerX}px`;
 
-				const dot = eventEl.createDiv({ cls: "timeline-event-dot" });
+				const dot = eventEl.createDiv({
+					cls: `timeline-event-dot ${ev.isInitialDifferentiated ? "is-initial-diamond" : ""}`,
+				});
 				dot.style.backgroundColor = ev.color;
 			}
 
@@ -802,7 +804,9 @@ export class HorizontalTimelineView {
 
 				// Label
 				const label = eventEl.createDiv({
-					cls: `timeline-event-label pos-${chosenSide} mode-${effectiveLabelMode}`,
+					cls: `timeline-event-label pos-${chosenSide} mode-${effectiveLabelMode} ${
+						ev.isInitialDifferentiated ? "is-initial-origin" : ""
+					}`,
 				});
 				label.style.left = ev.isRange ? `${Math.min(20, widthPx / 2)}px` : "0px";
 				if (chosenSide === "above") {
@@ -811,7 +815,14 @@ export class HorizontalTimelineView {
 					label.style.top = `calc(50% + ${stemHeight}px)`;
 				}
 
-				label.setText(ev.title);
+				if (ev.isInitialDifferentiated) {
+					const originBadge = label.createSpan({
+						text: "★ ",
+						cls: "timeline-origin-star",
+					});
+					originBadge.style.color = ev.color;
+				}
+				label.createSpan({ text: ev.title });
 				label.style.borderLeftColor = ev.color;
 				if (effectiveLabelMode === "vertical") {
 					label.style.maxHeight = `${this.settings.verticalLabelMaxHeight || 120}px`;
@@ -1004,6 +1015,10 @@ export class HorizontalTimelineView {
 		this.tooltipEl.empty();
 
 		const titleRow = this.tooltipEl.createDiv({ cls: "tooltip-title" });
+		if (ev.isInitialDifferentiated) {
+			const star = titleRow.createSpan({ text: "★ ", cls: "timeline-origin-star" });
+			star.style.color = ev.color;
+		}
 		titleRow.createSpan({ text: ev.title });
 
 		const dateRow = this.tooltipEl.createDiv({ cls: "tooltip-date-row" });
@@ -1024,12 +1039,17 @@ export class HorizontalTimelineView {
 			});
 		}
 
-		// Recurrence year count & origin year on subsequent occurrences
+		// Recurrence year count & origin year on subsequent occurrences, or origin badge on initial event
 		if (ev.isRecurring && ev.occurrenceYears && ev.occurrenceYears > 0 && ev.originYear) {
 			const yrsLabel = ev.occurrenceYears === 1 ? "1 year" : `${ev.occurrenceYears} years`;
 			this.tooltipEl.createDiv({
 				cls: "tooltip-recurrence-info",
 				text: `${yrsLabel} (since ${ev.originYear})`,
+			});
+		} else if (ev.isInitialDifferentiated && ev.originYear) {
+			this.tooltipEl.createDiv({
+				cls: "tooltip-recurrence-info is-origin",
+				text: ev.isBirthday ? `★ Born (${ev.originYear})` : `★ Initial event (${ev.originYear})`,
 			});
 		}
 
@@ -1078,10 +1098,17 @@ export class HorizontalTimelineView {
 		const listEl = this.tooltipEl.createDiv({ cls: "tooltip-cluster-list" });
 		for (const ev of cluster.events) {
 			const item = listEl.createDiv({ cls: "tooltip-cluster-item" });
-			const dot = item.createSpan({ cls: "tooltip-item-dot" });
+			const dot = item.createSpan({
+				cls: `tooltip-item-dot ${ev.isInitialDifferentiated ? "is-initial-diamond" : ""}`,
+			});
 			dot.style.backgroundColor = ev.color;
 
-			item.createSpan({ text: ev.title, cls: "tooltip-item-title" });
+			const titleSpan = item.createSpan({ cls: "tooltip-item-title" });
+			if (ev.isInitialDifferentiated) {
+				const star = titleSpan.createSpan({ text: "★ ", cls: "timeline-origin-star" });
+				star.style.color = ev.color;
+			}
+			titleSpan.createSpan({ text: ev.title });
 
 			const startFormatted = this.formatDateForDisplay(ev.startDate);
 			let dateStr = ev.isRange && ev.endDate 

@@ -467,6 +467,16 @@
 	box-shadow: 0 0 12px color-mix(in srgb, var(--event-color) 80%, transparent) !important;
 }
 
+.timeline-event-dot.is-initial-diamond {
+	border-radius: 3px;
+	transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.timeline-event-dot.is-initial-diamond:hover {
+	transform: translate(-50%, -50%) rotate(45deg) scale(1.35) !important;
+	box-shadow: 0 0 12px color-mix(in srgb, var(--event-color) 80%, transparent) !important;
+}
+
 /* Multi-Day Bar directly ON the line */
 .timeline-event-bar {
 	position: absolute;
@@ -683,6 +693,20 @@
 	font-size: 11.5px;
 	color: var(--text-muted);
 	margin-bottom: 6px;
+}
+
+.tooltip-recurrence-info.is-origin {
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.timeline-origin-star {
+	font-weight: 700;
+}
+
+.tooltip-item-dot.is-initial-diamond {
+	border-radius: 2px;
+	transform: rotate(45deg);
 }
 
 .tooltip-category-badge {
