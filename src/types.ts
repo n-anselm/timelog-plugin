@@ -51,6 +51,7 @@ export interface CategoryConfig {
 	color: string;
 	markerShape?: MarkerShape;
 	enabled: boolean;
+	useAliasAsLabel?: boolean;
 	recurring?: boolean;
 	isBirthday?: boolean;
 	differentiateInitial?: boolean;
@@ -77,7 +78,6 @@ export interface TimelineSettings {
 	zoomAcceleration: boolean;
 	labelMode: "auto" | "vertical" | "hidden" | "horizontal";
 	verticalLabelMaxHeight: number;
-	useAliasAsLabel: boolean;
 	showToday: boolean;
 	showGrid: boolean;
 	showDayTicks: boolean;
@@ -158,6 +158,9 @@ export function normalizeCategoryConfig(cat: CategoryConfig): CategoryConfig {
 	if (cat.recurring === undefined) {
 		cat.recurring = false;
 	}
+	if (cat.useAliasAsLabel === undefined) {
+		cat.useAliasAsLabel = false;
+	}
 	if (cat.isBirthday === undefined) {
 		cat.isBirthday = false;
 	}
@@ -189,7 +192,6 @@ export const DEFAULT_SETTINGS: TimelineSettings = {
 	zoomAcceleration: true,
 	labelMode: "auto",
 	verticalLabelMaxHeight: 120,
-	useAliasAsLabel: false,
 	showToday: true,
 	showGrid: true,
 	showDayTicks: true,

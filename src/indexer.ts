@@ -346,9 +346,9 @@ export class TimelineIndexer {
 		// Image preview URL
 		const imageUrl = this.resolveImageUrl(frontmatter?.image, file.path);
 
-		// Determine event title (alias if enabled and present, else frontmatter title or basename)
+		// Determine event title (alias if enabled on category and present, else frontmatter title or basename)
 		let title = frontmatter?.title || file.basename;
-		if (settings.useAliasAsLabel && frontmatter) {
+		if (matchedCategory?.useAliasAsLabel && frontmatter) {
 			const rawAlias = frontmatter.aliases ?? frontmatter.alias;
 			if (Array.isArray(rawAlias) && rawAlias.length > 0 && rawAlias[0] != null) {
 				const first = String(rawAlias[0]).trim();

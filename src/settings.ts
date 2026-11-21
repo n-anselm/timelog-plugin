@@ -286,20 +286,6 @@ export class TimelineSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Use note alias as label")
-			.setDesc(
-				"When enabled, uses the first alias from the note's frontmatter (aliases / alias) as the event label instead of the note name."
-			)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.useAliasAsLabel ?? false)
-					.onChange(async (value) => {
-						this.plugin.settings.useAliasAsLabel = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
 			.setName("Show today marker")
 			.setDesc("Highlight the current date with a vertical indicator line and badge.")
 			.addToggle((toggle) =>
@@ -641,8 +627,19 @@ export class TimelineSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				});
 
-				// Recurring options row
+				// Category options row (alias label & recurring options)
 				const recurRow = body.createDiv({ cls: "category-recurring-row" });
+
+				const aliasLabel = recurRow.createEl("label", { cls: "category-checkbox-label" });
+				const aliasCheck = aliasLabel.createEl("input", { type: "checkbox" });
+				aliasCheck.checked = cat.useAliasAsLabel ?? false;
+				aliasLabel.createSpan({
+					text: "Use note alias as label (uses first frontmatter aliases / alias entry instead of note title)",
+				});
+				aliasCheck.onchange = async () => {
+					cat.useAliasAsLabel = aliasCheck.checked;
+					await this.plugin.saveSettings();
+				};
 
 				const recurLabel = recurRow.createEl("label", { cls: "category-checkbox-label" });
 				const recurCheck = recurLabel.createEl("input", { type: "checkbox" });
