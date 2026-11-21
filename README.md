@@ -1,6 +1,6 @@
 # Timelog — Obsidian Timeline Plugin
 
-A clean, responsive, and high-performance **Horizontal Timeline Plugin** for Obsidian (`v1.1.0`) that plots your notes and events along a single continuous axis.
+A clean, responsive, and high-performance **Horizontal Timeline Plugin** for Obsidian (`v1.2.0`) that plots your notes and events along a single continuous axis.
 
 > Full disclosure: this is a personal project created with AI (mostly OpenCode with Gemini 4 Argon). Use at your own risk.
 
@@ -9,14 +9,19 @@ A clean, responsive, and high-performance **Horizontal Timeline Plugin** for Obs
 ## Features
 
 - **Single Continuous Axis**: Clean chronological line where time flows left-to-right.
-- **Dots, Multi-Day Spans & Same-Day Spreading**:
-  - Single-day events render as interactive dots along the axis; multiple events on the same day spread across the day column and automatically uncluster at `≥ 30 px/day`.
-  - Multi-day events (with `date-end`) render as continuous colored bars spanning their full inclusive duration.
+- **Dots, Lucide Icons, Multi-Day Spans & Same-Day Spreading**:
+  - Single-day events render as interactive markers along the axis (classic circle or any Lucide icon, either as a filled category-colored badge with auto-contrasted black/white icon or as an outlined icon with a form-fitting contour knockout).
+  - Multiple events on the same day spread across the day column and automatically uncluster at `≥ 30 px/day`.
+  - Multi-day events (with `date-end`) render as continuous colored bars (`12px` normal / `6px` zoomed out, starting with the category's icon marker) spanning their full inclusive duration.
+  - Configurable **Event indicator scale** (`0.5–2.5×`) scales single-day markers, multi-day bar thickness, and merged cluster bubbles.
   - Labels alternate above and below the axis across three stem tiers so nearby events stay legible.
+- **Yearly Recurring Events & Birthdays**:
+  - Per-category **Recurring yearly** toggle repeats matching events on the same month and day every year from their start year up to a configurable **Recurring events future horizon (years)** (default `3` years) or the note's end date property.
+  - Optional **Differentiate initial event** toggle (flips Filled ↔ Outlined marker style, adds a `★` origin badge, and titles birthday origins `"<Name> born"`) and **Birthday label format** (`"<Name>'s birthday"`).
 - **Adaptive Ruler & Labels**:
   - **Zoomed Out**: Labels hide and nearby events merge into numbered cluster bubbles (click a bubble to zoom in on it). When zoomed out to multi-year scale, monthly dividers collapse cleanly to year blocks.
   - **Medium Zoom (`≥ 30 px/day`)**: The day/weekday ruler fades in smoothly and labels switch to vertical orientation (with configurable max height).
-  - **High Zoom (`≥ 65 px/day`)**: Labels switch to horizontal badges and inline bar titles appear.
+  - **High Zoom (`≥ 65 px/day`)**: Labels switch to horizontal badges.
 - **Condition-Based Categories & Colors**:
   - Organize events with expandable, drag-to-reorder category cards (first match wins) and native color pickers.
   - Build rules matching `Tags` (multi-tag pill input with autocomplete), `Folder`, `File Name`, `File Basename`, `Path`, `Extension`, or any custom frontmatter property (`AND` / `OR` modes).

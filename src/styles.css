@@ -598,26 +598,6 @@
 	box-shadow: 0 0 14px var(--event-color) !important;
 }
 
-.event-bar-label {
-	color: #ffffff;
-	font-size: 12.5px;
-	font-weight: 600;
-	line-height: 1;
-	display: flex;
-	align-items: center;
-	height: 100%;
-	margin: 0;
-	padding: 0;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
-}
-
-.event-bar-label.has-start-marker {
-	padding-left: calc(10px * var(--indicator-scale, 1));
-}
-
 /* ---------------- MERGED CLUSTER DOT ---------------- */
 .timeline-cluster-dot {
 	position: absolute;
@@ -1060,50 +1040,6 @@
 	background: var(--background-primary);
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 6px;
-}
-
-.category-indicator-header-row {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 8px;
-	flex-wrap: wrap;
-}
-
-.category-style-toggle-group {
-	display: inline-flex;
-	border: 1px solid var(--background-modifier-border);
-	border-radius: 6px;
-	overflow: hidden;
-	background: var(--background-primary);
-}
-
-.category-style-btn {
-	background: transparent;
-	border: none;
-	padding: 4px 10px;
-	font-size: 11.5px;
-	color: var(--text-muted);
-	cursor: pointer;
-	transition: all 0.15s ease;
-}
-
-.category-style-btn:hover {
-	color: var(--text-normal);
-	background: var(--background-modifier-hover);
-}
-
-.category-style-btn.is-selected {
-	background: var(--interactive-accent);
-	color: var(--text-on-accent);
-	font-weight: 600;
-}
-
-.category-shape-list {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	flex-wrap: wrap;
 }
 
 .category-shape-option {

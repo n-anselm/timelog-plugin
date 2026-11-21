@@ -1,6 +1,6 @@
 # Obsidian Timeline (Timelog) — Agent Handoff
 
-> **Last verified:** 2026-11-14 (v1.1.0 — source built & synced against `main.js` and `styles.css`)
+> **Last verified:** 2026-11-21 (v1.2.0 — source built & synced against `main.js` and `styles.css`)
 > **Status:** Working. Built, loaded in Obsidian, single horizontal view + codeblock embed.
 > **Purpose:** Everything an AI agent needs to continue this plugin without prior context.
 
@@ -14,7 +14,7 @@ This plugin shows notes that have dates in their frontmatter on one continuous h
 
 1. `src/*.ts` and `src/styles.css` — the truth.
 2. This file — verified notes and intent.
-3. `README.md` — user-facing overview (updated for `v1.1.0`).
+3. `README.md` — user-facing overview (updated for `v1.2.0`).
 
 **Never edit these by hand:**
 
@@ -29,28 +29,27 @@ This plugin shows notes that have dates in their frontmatter on one continuous h
 
 ---
 
-## 1. Current state (v1.1.0)
+## 1. Current state (v1.2.0)
 
 ### Implemented and working (main view & embedded view unless noted)
 
 - Read-only vault indexing from a configurable folder (default `Calendar`), subfolders optional, plus an optional **Global note filter** (`none` / `include` / `exclude`) with multi-condition rules.
 - Start date from frontmatter (`date`, `startDate`, `start`) or a `YYYY-MM-DD` in the filename, with strict calendar validity checking (rejects impossible dates like `2026-02-31`).
-- End date from frontmatter (`date-end`, `endDate`, `end`) for multi-day bars.
-- Optional alias label mode (`useAliasAsLabel`, off by default): uses the first `aliases` / `alias` entry as the event title/label when enabled.
+- End date from frontmatter (`date-end`, `endDate`, `end`) for multi-day bars, or as the recurrence stop bound on yearly recurring categories (accepts full `YYYY-MM-DD`, bare `YYYY`, or `YYYY - YYYY`).
 - Frontmatter `image` preview support: resolves wiki-links (`"[[image.jpeg]]"`), markdown links, vault paths, and URLs to a thumbnail in the hover popup, plus a `75vh` hover lightbox (`Esc` or mouse-out to close).
-- **Condition-based Categories & Colors (Linear Calendar style):**
-  - Each category has an expandable card in Settings with drag-to-reorder priority (first match wins), enable checkbox, colour picker + hex/CSS variable input, `matchMode` (`All (AND)` / `Any (OR)`), and a multi-condition builder.
+- **Condition-based Categories, Lucide Indicators & Yearly Recurrence (Linear Calendar style):**
+  - Each category has an expandable card in Settings with drag-to-reorder priority (first match wins), enable checkbox, colour picker + hex/CSS variable input, **Event indicator** (`Circle` or any Lucide icon name with live preview), **Outlined icon with contour knockout** toggle (vs. filled category-colored badge with auto-contrasted black/white Lucide icon), per-category **Use note alias as label** (`useAliasAsLabel`), **Recurring yearly** (`recurring`) with optional **Differentiate initial event** (`differentiateInitial` — flips Filled ↔ Outlined style, adds a `★` origin badge, and formats initial birthday events as `"<Name> born"`) and **Birthday label format** (`isBirthday` — formats repeats as `"<Name>'s birthday"`), `matchMode` (`All (AND)` / `Any (OR)`), and a multi-condition builder.
   - Conditions support `Tags` (multi-tag pill input with vault tag autocomplete), `Folder` (with `Subfolders` option), `File Name`, `File Basename`, `Path`, `Extension`, and any `Custom frontmatter property`, with operators `is`, `is not`, `contains`, `does not contain`, `starts with`, `ends with`, `matches date pattern` (`+ text`), `exists`, and `does not exist`. All text inputs save live (`oninput`).
   - Uncategorized notes are hidden by default (`showUncategorizedNotes: false`) so only notes matching at least one enabled category appear on the timeline. Legacy `cat.tag` configs migrate automatically via `normalizeCategoryConfig()`.
 - Horizontal view as a tab ("Timelog", ribbon icon and `Timelog: Open Timelog View` command), plus a ```` ```timeline ```` code block embed with `MarkdownRenderChild` cleanup on unload.
-- Single central axis (`4px` thick); `16px` dots for single-day events, scaled bars (`22/12/6px`) for ranges.
+- Single central axis (`4px` thick); classic `16px` circle or `22px` Lucide badge / `18px` contour-knockout Lucide icon for single-day events, scaled bars (`12/6px` with range-start icon marker when configured) for ranges, all scalable via **Event indicator scale** (`indicatorScale`, `0.5–2.5`, default `1.0`).
 - Same-day point events spread horizontally across their day column (`(idx + 1) / (count + 1)`) and uncluster automatically at `≥ 30 px/day` into separate dots and alternating above/below stems.
 - Persistent month + day ruler (`76px` tall) with viewport-virtualized day cells (`renderVisibleRulerDays`). At `< 30 px/day`, the days row fades out over `0.4s` in place without shifting the timeline stage. When zoomed out to where a year is `≤ 50%` of the viewport width, monthly dividers and monthly grid lines hide and the year label overflows cleanly (`is-year-block`).
 - Single-layer CSS repeating gradients for axis day ticks (`.timeline-day-ticks-layer`, toggleable via `showDayTicks`) and weekly Monday grid lines (`.timeline-week-grid-layer`), avoiding thousands of DOM nodes.
 - Adaptive labels: auto (hidden `< 30` → vertical `30–64` → horizontal `≥ 65`), or forced; configurable vertical label max height (`verticalLabelMaxHeight`, `60–360px`, default `120px`).
 - Cluster bubbles (`24px`) for nearby events when zoomed out (`< 30 px/day`); clicking one zooms `max(30, round(px * 2.2))` centred on it.
 - Configurable **Default view zoom (time span)** (`defaultViewSpan`, default `"6 months"`) and **Default view offset from today** (`defaultViewOffset`, default `"0"`).
-- Today marker (line + badge) using configurable `todayMarkerColor`, optional grid lines (`showGrid`), optional axis day ticks (`showDayTicks`), and `autoScrollToToday`.
+- Today marker (line + badge) using configurable `todayMarkerColor`, `todayLineWidth` (`1–8px`, default `2`), `todayLineOpacity` (`0.1–1.0`, default `1`), optional grid lines (`showGrid`), optional axis day ticks (`showDayTicks`), and `autoScrollToToday`.
 - Cursor-pinned wheel zoom (`1–140 px/day`), `requestAnimationFrame`-coalesced, with configurable **Zoom sensitivity** (`0.3–2.5`, default `1.0`) and velocity-based **Zoom acceleration** (`zoomAcceleration`, default `true`).
 - Drag panning with heavy momentum, shift-wheel pan, trackpad horizontal pan.
 - Keyboard shortcuts (scoped to `.obsidian-timeline-wrapper` focus so single-key defaults never hijack typing elsewhere in Obsidian, plus 11 commands registered in Obsidian's **Settings → Hotkeys**):
@@ -138,19 +137,22 @@ Stored in `data.json` at the plugin root (gitignored).
 | `filterMode` | `"none"` | Global pre-filter (`none` / `include` / `exclude`) |
 | `filterConditions` | `[]` | Multi-condition rules for the global note filter |
 | `startDateProperties` | `["date","startDate","start"]` | Priority order for the start date |
-| `endDateProperties` | `["date-end","endDate","end"]` | Priority order for the end date |
-| `categories` | 4 defaults | Condition-based category cards (priority order, first match wins; unchecked hides category events & pill) |
+| `endDateProperties` | `["date-end","endDate","end"]` | Priority order for the end date (or recurrence stop bound on recurring categories) |
+| `recurringYearsFuture` | `3` | Future horizon in years (`0–20`) past the current year for yearly recurring events |
+| `categories` | 4 defaults | Condition-based category cards (`markerIcon`, `markerStyle`, `useAliasAsLabel`, `recurring`, `differentiateInitial`, `isBirthday`, `matchMode`, `conditions`) |
 | `showUncategorizedNotes` | `false` | Hide dated notes that match no enabled category by default |
 | `defaultColor` | `var(--interactive-accent)` | Colour for uncategorised events when `showUncategorizedNotes` is enabled |
 | `todayMarkerColor` | `"#ff3333"` | Today vertical line and badge colour (`--today-color`) |
+| `todayLineWidth` | `2` | Today vertical line width in pixels (`1–8`) |
+| `todayLineOpacity` | `1` | Today vertical line opacity (`0.1–1.0`) |
 | `defaultViewSpan` | `"6 months"` | Initial visible time span (e.g. `6 months`, `6mo`, `5 days`, `1 year`) |
 | `defaultViewOffset` | `"0"` | Initial view offset from today (`0` centers today, `-1 month` shifts today 1 month right) |
 | `zoomPixelsPerDay` | `40` | Last zoom level in px/day |
 | `zoomSensitivity` | `1.0` | Wheel/trackpad zoom speed multiplier (`0.3–2.5`) |
 | `zoomAcceleration` | `true` | Velocity-based wheel zoom acceleration |
+| `indicatorScale` | `1.0` | Size multiplier (`0.5–2.5`) for single-day markers, multi-day bar height, and cluster bubbles |
 | `labelMode` | `"auto"` | `auto` / `vertical` / `hidden` / `horizontal` |
 | `verticalLabelMaxHeight` | `120` | Max height (`60–360px`) for vertical labels before ellipsis |
-| `useAliasAsLabel` | `false` | Use first frontmatter `aliases`/`alias` entry as event label |
 | `showToday` | `true` | Render the today marker |
 | `showGrid` | `true` | Weekly Monday CSS grid layer (`≥15 px/day`), monthly/yearly lines below |
 | `showDayTicks` | `true` | Axis day tick marks CSS layer (`≥30 px/day`, aligned to day boundaries) |
@@ -192,4 +194,4 @@ Stored in `data.json` at the plugin root (gitignored).
 - **Plugin:** `.obsidian/plugins/obsidian-timeline/`
 - **Event notes:** `Calendar/` by default (configurable; blank scans the whole vault)
 - **Related plugin:** Linear Calendar, sharing the `date` / `date-end` / `#event` convention
-- **Version:** `1.1.0`, `minAppVersion` `1.0.0`
+- **Version:** `1.2.0`, `minAppVersion` `1.0.0`
