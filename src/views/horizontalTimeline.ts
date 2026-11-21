@@ -565,6 +565,10 @@ export class HorizontalTimelineView {
 		if (offsetDays >= 0 && offsetDays <= this.totalDays) {
 			const todayMarker = trackEl.createDiv({ cls: "timeline-today-marker" });
 			todayMarker.style.setProperty("--today-color", this.settings.todayMarkerColor || "#ff3333");
+			const lineWidth = this.settings.todayLineWidth ?? 2;
+			const lineOpacity = this.settings.todayLineOpacity ?? 1;
+			todayMarker.style.setProperty("--today-line-width", `${lineWidth}px`);
+			todayMarker.style.setProperty("--today-line-opacity", String(lineOpacity));
 			const x = offsetDays * this.pixelsPerDay + this.pixelsPerDay / 2;
 			todayMarker.style.left = `${x}px`;
 

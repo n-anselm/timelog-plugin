@@ -312,6 +312,34 @@ export class TimelineSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Today line width")
+			.setDesc("Thickness in pixels of the vertical today indicator line.")
+			.addSlider((slider) =>
+				slider
+					.setLimits(1, 8, 0.5)
+					.setValue(this.plugin.settings.todayLineWidth ?? 2)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.todayLineWidth = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Today line opacity")
+			.setDesc("Opacity of the vertical today indicator line (0.1 = subtle, 1.0 = solid).")
+			.addSlider((slider) =>
+				slider
+					.setLimits(0.1, 1.0, 0.05)
+					.setValue(this.plugin.settings.todayLineOpacity ?? 1)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.todayLineOpacity = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
 			.setName("Show time grid")
 			.setDesc("Show subtle vertical grid lines for weeks and days.")
 			.addToggle((toggle) =>

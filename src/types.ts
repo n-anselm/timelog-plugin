@@ -71,6 +71,8 @@ export interface TimelineSettings {
 	showUncategorizedNotes: boolean;
 	defaultColor: string;
 	todayMarkerColor: string;
+	todayLineWidth: number;
+	todayLineOpacity: number;
 	defaultViewSpan: string; // e.g. "6mo", "5 days", "1 year"
 	defaultViewOffset: string; // e.g. "0", "-1 month", "-3mo"
 	zoomPixelsPerDay: number; // e.g. 1 to 140
@@ -185,6 +187,8 @@ export const DEFAULT_SETTINGS: TimelineSettings = {
 	showUncategorizedNotes: false,
 	defaultColor: "var(--interactive-accent)",
 	todayMarkerColor: "#ff3333",
+	todayLineWidth: 2,
+	todayLineOpacity: 1,
 	defaultViewSpan: "6 months",
 	defaultViewOffset: "0",
 	zoomPixelsPerDay: 40,

@@ -393,18 +393,22 @@
 	position: absolute;
 	top: 0;
 	bottom: 0;
-	width: 2px;
+	width: 0;
 	z-index: 8;
 	pointer-events: none;
 	--today-color: #ff3333;
+	--today-line-width: 2px;
+	--today-line-opacity: 1;
 }
 
 .timeline-today-line {
 	position: absolute;
 	top: 64px;
 	bottom: 0;
-	left: -1px;
-	width: 2px;
+	left: 0;
+	transform: translateX(-50%);
+	width: var(--today-line-width, 2px);
+	opacity: var(--today-line-opacity, 1);
 	background-color: var(--today-color, #ff3333);
 	box-shadow: 0 0 10px var(--today-color, #ff3333);
 	mask-image: linear-gradient(
