@@ -64,6 +64,10 @@ export class HorizontalTimelineView {
 	private lastWheelZoomTime: number = 0;
 	private wheelZoomBurst: number = 0;
 
+	// Zoom hint UI
+	private zoomHintEl: HTMLElement | null = null;
+	private zoomHintHideTimer: number | null = null;
+
 	// Active filter state
 	private activeHiddenCategoryIds: Set<string>;
 
@@ -115,6 +119,10 @@ export class HorizontalTimelineView {
 			this.monthsRowEl = this.rulerEl.createDiv({ cls: "timeline-ruler-months" });
 			this.daysRowEl = this.rulerEl.createDiv({ cls: "timeline-ruler-days" });
 			this.trackContentEl = this.timelineTrackEl.createDiv({ cls: "timeline-track-content" });
+			this.zoomHintEl = this.containerEl.createDiv({
+				cls: "timeline-zoom-hint",
+				text: "Hold Ctrl to zoom out farther",
+			});
 
 			this.setupInteractionHandlers(this.scrollWrapperEl);
 			this.setupTooltip();
@@ -348,8 +356,12 @@ export class HorizontalTimelineView {
 	}
 
 	public applyZoom(newPx: number, cursorScreenX?: number, targetDay?: number) {
-		const clamped = Math.max(1, Math.min(140, newPx));
-		if (clamped === this.pixelsPerDay) return;
+		// Calculate minimum zoom to fit entire timeline in viewport
+		const viewWidth = this.scrollWrapperEl?.clientWidth || this.containerEl.clientWidth || 1200;
+		const minZoomToFit = this.totalDays > 0 ? viewWidth / this.totalDays : 0.1;
+		const minZoom = Math.max(0.1, minZoomToFit);
+		const clamped = Math.max(minZoom, Math.min(140, newPx));
+		if (Math.abs(clamped - this.pixelsPerDay) < 0.001) return;
 
 		if (!this.scrollWrapperEl) return;
 
@@ -1410,15 +1422,17 @@ export class HorizontalTimelineView {
 			(e: WheelEvent) => {
 				e.preventDefault();
 
-				// If holding Shift -> move sideways
+				// If holding Shift -> move sideways (zoom-aware: slower when zoomed out for precision)
 				if (e.shiftKey) {
-					scrollWrapper.scrollLeft += (e.deltaY || e.deltaX) * 1.4;
+					const panScale = Math.max(0.1, Math.min(1.0, this.pixelsPerDay / 30));
+					scrollWrapper.scrollLeft += (e.deltaY || e.deltaX) * 1.4 * panScale;
 					return;
 				}
 
-				// If natural trackpad horizontal delta -> scroll sideways
+				// If natural trackpad horizontal delta -> scroll sideways (zoom-aware)
 				if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 2) {
-					scrollWrapper.scrollLeft += e.deltaX;
+					const panScale = Math.max(0.1, Math.min(1.0, this.pixelsPerDay / 30));
+					scrollWrapper.scrollLeft += e.deltaX * panScale;
 					return;
 				}
 
@@ -1459,16 +1473,34 @@ export class HorizontalTimelineView {
 
 				let newZoom: number;
 				if (delta < 0) {
-					// Zooming in
-					const calculated = Math.round(basePx * (1 + stepFraction));
-					newZoom = Math.max(basePx + 1, calculated);
+					// Zooming in (multiplicative so it works below 1 px/day)
+					newZoom = basePx * (1 + stepFraction);
 				} else {
-					// Zooming out
-					const calculated = Math.round(basePx / (1 + stepFraction));
-					newZoom = Math.min(basePx - 1, calculated);
+					// Zooming out (multiplicative so it works below 1 px/day)
+					newZoom = basePx / (1 + stepFraction);
 				}
 
-				newZoom = Math.max(1, Math.min(140, newZoom));
+				// Ctrl held = deep zoom out past the normal 1 px/day floor
+				// If user is at or above 1 px/day and tries to go below 1 without Ctrl, clamp at 1
+				// If user is already below 1 px/day (extended mode), allow free zooming
+				const currentlyAtOrAboveOne = this.pixelsPerDay >= 1;
+				const willGoBelowOne = newZoom < 1;
+
+				// Don't zoom out past the timeline length
+				const viewWidth = this.scrollWrapperEl?.clientWidth || 1200;
+				const minZoomToFit = this.totalDays > 0 ? viewWidth / this.totalDays : 0.1;
+				const minZoom = Math.max(0.1, minZoomToFit);
+
+				if (delta > 0 && willGoBelowOne && currentlyAtOrAboveOne && !e.ctrlKey) {
+					newZoom = 1; // Clamp at 1 px/day floor
+					if (minZoom < 1) {
+						this.showZoomHint();
+					}
+				} else {
+					this.hideZoomHint();
+				}
+
+				newZoom = Math.max(minZoom, Math.min(140, newZoom));
 				this.pendingZoom = { newPx: newZoom, cursorScreenX, targetDay };
 
 				if (this.zoomRafId === null) {
@@ -1545,12 +1577,22 @@ export class HorizontalTimelineView {
 	}
 
 	public stepZoomIn() {
-		const nextZoom = this.pixelsPerDay < 10 ? this.pixelsPerDay + 2 : this.pixelsPerDay + 8;
+		this.hideZoomHint();
+		const nextZoom = this.pixelsPerDay < 10 ? this.pixelsPerDay * 1.25 : this.pixelsPerDay + 8;
 		this.applyZoom(nextZoom);
 	}
 
 	public stepZoomOut() {
-		const nextZoom = this.pixelsPerDay < 10 ? this.pixelsPerDay - 1 : this.pixelsPerDay - 6;
+		const viewWidth = this.scrollWrapperEl?.clientWidth || 1200;
+		const minZoomToFit = this.totalDays > 0 ? viewWidth / this.totalDays : 0.1;
+		const minZoom = Math.max(0.1, minZoomToFit);
+		let nextZoom = this.pixelsPerDay < 10 ? this.pixelsPerDay / 1.25 : this.pixelsPerDay - 6;
+		if (this.pixelsPerDay >= 1 && nextZoom < 1) {
+			nextZoom = 1;
+			if (minZoom < 1) {
+				this.showZoomHint();
+			}
+		}
 		this.applyZoom(nextZoom);
 	}
 
@@ -1592,7 +1634,9 @@ export class HorizontalTimelineView {
 				if (ev.endTimestamp > maxTs) maxTs = ev.endTimestamp;
 			}
 			const spanDays = Math.max(30, (maxTs - minTs) / dayMs + 30);
-			const targetPx = Math.max(1, Math.min(140, Math.floor(viewWidth / spanDays)));
+			const minZoomToFit = this.totalDays > 0 ? viewWidth / this.totalDays : 0.1;
+			const minZoom = Math.max(0.1, minZoomToFit);
+			const targetPx = Math.max(minZoom, Math.min(140, Math.floor(viewWidth / spanDays)));
 			const centerDay = ((minTs + maxTs) / 2 - this.minTimestamp) / dayMs;
 
 			this.pixelsPerDay = targetPx;
@@ -1607,6 +1651,8 @@ export class HorizontalTimelineView {
 			this.applyZoom(1);
 			this.scrollToToday(true);
 		}
+
+		this.hideZoomHint();
 	}
 
 	public resetToDefaultView(smooth: boolean = true) {
@@ -1646,6 +1692,27 @@ export class HorizontalTimelineView {
 			left: days * this.pixelsPerDay,
 			behavior: "smooth",
 		});
+	}
+
+	private showZoomHint() {
+		if (!this.zoomHintEl) return;
+		this.zoomHintEl.classList.add("is-visible");
+		if (this.zoomHintHideTimer) {
+			window.clearTimeout(this.zoomHintHideTimer);
+		}
+		this.zoomHintHideTimer = window.setTimeout(() => {
+			this.zoomHintEl?.classList.remove("is-visible");
+			this.zoomHintHideTimer = null;
+		}, 3000);
+	}
+
+	private hideZoomHint() {
+		if (!this.zoomHintEl) return;
+		this.zoomHintEl.classList.remove("is-visible");
+		if (this.zoomHintHideTimer) {
+			window.clearTimeout(this.zoomHintHideTimer);
+			this.zoomHintHideTimer = null;
+		}
 	}
 
 	public destroy() {
