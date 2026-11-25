@@ -40,6 +40,9 @@ export class HorizontalTimelineView {
 	private tooltipEl: HTMLElement | null = null;
 	private tooltipHideTimer: number | null = null;
 	private tooltipFadeTimer: number | null = null;
+	private subTooltipEl: HTMLElement | null = null;
+	private subTooltipHideTimer: number | null = null;
+	private subTooltipFadeTimer: number | null = null;
 	private lightboxEl: HTMLElement | null = null;
 	private lightboxFadeTimer: number | null = null;
 	private onWindowKeyDown: ((e: KeyboardEvent) => void) | null = null;
@@ -938,11 +941,31 @@ export class HorizontalTimelineView {
 			this.cancelHideTooltip();
 		};
 		this.tooltipEl.onmouseleave = () => {
-			if (!this.isLightboxVisible()) {
+			if (!this.isLightboxVisible() && !this.subTooltipEl?.matches(":hover")) {
 				this.scheduleHideTooltip();
 			}
 		};
 		document.body.appendChild(this.tooltipEl);
+
+		if (this.subTooltipEl) {
+			this.subTooltipEl.remove();
+		}
+		this.subTooltipEl = document.createElement("div");
+		this.subTooltipEl.className = "timeline-floating-tooltip is-sub-tooltip";
+		this.subTooltipEl.style.display = "none";
+		this.subTooltipEl.onmouseenter = () => {
+			this.cancelHideTooltip();
+			this.cancelHideSubTooltip();
+		};
+		this.subTooltipEl.onmouseleave = () => {
+			if (!this.isLightboxVisible()) {
+				this.scheduleHideSubTooltip();
+				if (!this.tooltipEl?.matches(":hover")) {
+					this.scheduleHideTooltip();
+				}
+			}
+		};
+		document.body.appendChild(this.subTooltipEl);
 
 		if (this.lightboxEl) {
 			this.lightboxEl.remove();
@@ -961,6 +984,8 @@ export class HorizontalTimelineView {
 					e.preventDefault();
 					e.stopPropagation();
 					this.hideImageLightbox();
+				} else if (this.subTooltipEl && this.subTooltipEl.style.display !== "none") {
+					this.hideSubTooltip();
 				} else if (this.tooltipEl && this.tooltipEl.style.display !== "none") {
 					this.hideTooltip();
 				}
@@ -1090,24 +1115,27 @@ export class HorizontalTimelineView {
 		return isFuture ? `In ${timeSpan}` : `${timeSpan} ago`;
 	}
 
-	private showTooltip(ev: TimelineEvent, mouseEvent: MouseEvent) {
-		if (!this.tooltipEl) return;
-		this.tooltipEl.empty();
+	private populateEventTooltipContent(
+		container: HTMLElement,
+		ev: TimelineEvent,
+		onImageLoad: () => void
+	) {
+		container.empty();
 
-		const titleRow = this.tooltipEl.createDiv({ cls: "tooltip-title" });
+		const titleRow = container.createDiv({ cls: "tooltip-title" });
 		if (ev.isInitialDifferentiated) {
 			const star = titleRow.createSpan({ text: "★ ", cls: "timeline-origin-star" });
 			star.style.color = ev.color;
 		}
 		titleRow.createSpan({ text: ev.title });
 
-		const dateRow = this.tooltipEl.createDiv({ cls: "tooltip-date-row" });
+		const dateRow = container.createDiv({ cls: "tooltip-date-row" });
 		dateRow.setText(this.formatEventDateDisplay(ev));
 
 		// Relative Time Message (e.g. "In 5 days" or "3 years, 2 months ago")
 		const relativeTimeStr = this.getRelativeTimeMessage(ev);
 		if (relativeTimeStr) {
-			this.tooltipEl.createDiv({
+			container.createDiv({
 				cls: "tooltip-relative-time",
 				text: relativeTimeStr,
 			});
@@ -1116,19 +1144,19 @@ export class HorizontalTimelineView {
 		// Recurrence year count & origin year on subsequent occurrences, or origin badge on initial event
 		if (ev.isRecurring && ev.occurrenceYears && ev.occurrenceYears > 0 && ev.originYear) {
 			const yrsLabel = ev.occurrenceYears === 1 ? "1 year" : `${ev.occurrenceYears} years`;
-			this.tooltipEl.createDiv({
+			container.createDiv({
 				cls: "tooltip-recurrence-info",
 				text: `${yrsLabel} (since ${ev.originYear})`,
 			});
 		} else if (ev.isInitialDifferentiated && ev.originYear) {
-			this.tooltipEl.createDiv({
+			container.createDiv({
 				cls: "tooltip-recurrence-info is-origin",
 				text: ev.isBirthday ? `★ Born (${ev.originYear})` : `★ Initial event (${ev.originYear})`,
 			});
 		}
 
 		if (ev.categoryName) {
-			const badge = this.tooltipEl.createSpan({
+			const badge = container.createSpan({
 				cls: "tooltip-category-badge",
 				text: ev.categoryName,
 			});
@@ -1136,29 +1164,109 @@ export class HorizontalTimelineView {
 		}
 
 		if (ev.imageUrl) {
-			const imgEl = this.tooltipEl.createEl("img", {
+			const imgEl = container.createEl("img", {
 				cls: "tooltip-image",
 				attr: { src: ev.imageUrl, alt: ev.title },
 			});
-			imgEl.onload = () => this.positionTooltip(mouseEvent);
+			imgEl.onload = onImageLoad;
 			imgEl.onmouseenter = () => {
 				this.cancelHideTooltip();
+				this.cancelHideSubTooltip();
 				this.showImageLightbox(ev.imageUrl!, ev.title);
 			};
 		}
 
 		if (ev.description) {
-			const descEl = this.tooltipEl.createDiv({ cls: "tooltip-desc" });
+			const descEl = container.createDiv({ cls: "tooltip-desc" });
 			descEl.setText(ev.description);
 		}
+	}
+
+	private showTooltip(ev: TimelineEvent, mouseEvent: MouseEvent) {
+		if (!this.tooltipEl) return;
+		this.hideSubTooltip();
+		this.populateEventTooltipContent(this.tooltipEl, ev, () => this.positionTooltip(mouseEvent));
 
 		this.tooltipEl.removeClass("is-hiding");
 		this.tooltipEl.style.display = "block";
 		this.positionTooltip(mouseEvent);
 	}
 
+	private showSubTooltip(ev: TimelineEvent, anchorEl: HTMLElement) {
+		if (!this.subTooltipEl) return;
+		this.cancelHideSubTooltip();
+		this.populateEventTooltipContent(this.subTooltipEl, ev, () =>
+			this.positionSubTooltip(anchorEl)
+		);
+
+		this.subTooltipEl.removeClass("is-hiding");
+		this.subTooltipEl.style.display = "block";
+		this.positionSubTooltip(anchorEl);
+	}
+
+	private positionSubTooltip(anchorEl: HTMLElement) {
+		if (!this.subTooltipEl || !this.tooltipEl) return;
+		const parentRect = this.tooltipEl.getBoundingClientRect();
+		const itemRect = anchorEl.getBoundingClientRect();
+		const subWidth = this.subTooltipEl.offsetWidth || 240;
+		const subHeight = this.subTooltipEl.offsetHeight || 110;
+
+		let left = parentRect.right + 8;
+		if (left + subWidth > window.innerWidth - 10) {
+			left = parentRect.left - subWidth - 8;
+		}
+
+		let top = itemRect.top - 6;
+		if (top + subHeight > window.innerHeight - 10) {
+			top = window.innerHeight - subHeight - 10;
+		}
+
+		this.subTooltipEl.style.left = `${Math.max(10, left)}px`;
+		this.subTooltipEl.style.top = `${Math.max(10, top)}px`;
+	}
+
+	private cancelHideSubTooltip() {
+		if (this.subTooltipHideTimer !== null) {
+			window.clearTimeout(this.subTooltipHideTimer);
+			this.subTooltipHideTimer = null;
+		}
+		if (this.subTooltipFadeTimer !== null) {
+			window.clearTimeout(this.subTooltipFadeTimer);
+			this.subTooltipFadeTimer = null;
+		}
+		if (this.subTooltipEl) {
+			this.subTooltipEl.removeClass("is-hiding");
+		}
+	}
+
+	private scheduleHideSubTooltip(delayMs: number = 160) {
+		this.cancelHideSubTooltip();
+		this.subTooltipHideTimer = window.setTimeout(() => {
+			this.subTooltipHideTimer = null;
+			this.hideSubTooltip();
+		}, delayMs);
+	}
+
+	private hideSubTooltip() {
+		if (this.subTooltipHideTimer !== null) {
+			window.clearTimeout(this.subTooltipHideTimer);
+			this.subTooltipHideTimer = null;
+		}
+		if (!this.subTooltipEl || this.subTooltipEl.style.display === "none") return;
+
+		this.subTooltipEl.addClass("is-hiding");
+		this.subTooltipFadeTimer = window.setTimeout(() => {
+			this.subTooltipFadeTimer = null;
+			if (this.subTooltipEl) {
+				this.subTooltipEl.removeClass("is-hiding");
+				this.subTooltipEl.style.display = "none";
+			}
+		}, 120);
+	}
+
 	private showClusterTooltip(cluster: TimelineCluster, mouseEvent: MouseEvent) {
 		if (!this.tooltipEl) return;
+		this.hideSubTooltip();
 		this.tooltipEl.empty();
 
 		const titleRow = this.tooltipEl.createDiv({ cls: "tooltip-title" });
@@ -1197,6 +1305,23 @@ export class HorizontalTimelineView {
 				dateStr += ` · ${yrsLabel} (since ${ev.originYear})`;
 			}
 			item.createSpan({ text: dateStr, cls: "tooltip-item-date" });
+
+			item.onmouseenter = (e) => {
+				this.cancelHideTooltip();
+				this.showSubTooltip(ev, item);
+				this.app.workspace.trigger("hover-link", {
+					event: e,
+					source: "timeline-view",
+					hoverParent: this.containerEl,
+					targetEl: item,
+					linktext: ev.file.path,
+					sourcePath: ev.file.path,
+				});
+			};
+
+			item.onmouseleave = () => {
+				this.scheduleHideSubTooltip();
+			};
 
 			item.onclick = (e) => {
 				e.stopPropagation();
@@ -1269,7 +1394,11 @@ export class HorizontalTimelineView {
 				this.hideImageLightbox();
 			} else if (this.tooltipEl) {
 				// Also close if the cursor left the thumbnail without moving into the lightbox image
-				const tipRect = this.tooltipEl.getBoundingClientRect();
+				const activeTip =
+					this.subTooltipEl && this.subTooltipEl.style.display !== "none"
+						? this.subTooltipEl
+						: this.tooltipEl;
+				const tipRect = activeTip.getBoundingClientRect();
 				const insideTip =
 					e.clientX >= tipRect.left &&
 					e.clientX <= tipRect.right &&
@@ -1304,6 +1433,7 @@ export class HorizontalTimelineView {
 
 		if (
 			!this.tooltipEl?.matches(":hover") &&
+			!this.subTooltipEl?.matches(":hover") &&
 			!this.containerEl.querySelector(".timeline-event-item:hover, .timeline-cluster-dot:hover")
 		) {
 			this.scheduleHideTooltip();
@@ -1333,6 +1463,7 @@ export class HorizontalTimelineView {
 	}
 
 	private hideTooltip() {
+		this.hideSubTooltip();
 		if (this.tooltipHideTimer !== null) {
 			window.clearTimeout(this.tooltipHideTimer);
 			this.tooltipHideTimer = null;
@@ -1752,6 +1883,9 @@ export class HorizontalTimelineView {
 		}
 		if (this.tooltipEl && this.tooltipEl.parentNode) {
 			this.tooltipEl.parentNode.removeChild(this.tooltipEl);
+		}
+		if (this.subTooltipEl && this.subTooltipEl.parentNode) {
+			this.subTooltipEl.parentNode.removeChild(this.subTooltipEl);
 		}
 		if (this.lightboxEl && this.lightboxEl.parentNode) {
 			this.lightboxEl.parentNode.removeChild(this.lightboxEl);
