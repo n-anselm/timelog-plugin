@@ -279,6 +279,29 @@
 	pointer-events: none;
 }
 
+.timeline-ruler-cursor {
+	position: absolute;
+	top: 28px;
+	left: 0;
+	width: 1.5px;
+	height: 48px;
+	background-color: var(--interactive-accent);
+	box-shadow: 0 0 6px var(--interactive-accent);
+	opacity: 0;
+	pointer-events: none;
+	z-index: 18;
+	transition: opacity 0.15s ease;
+	will-change: transform;
+}
+
+.timeline-ruler.is-days-hidden .timeline-ruler-cursor {
+	opacity: 0 !important;
+}
+
+.timeline-ruler-cursor.is-visible {
+	opacity: 0.85;
+}
+
 .timeline-day-tick {
 	position: absolute;
 	top: 0;

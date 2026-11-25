@@ -376,6 +376,20 @@ export class TimelineSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Show cursor position on day ruler")
+			.setDesc(
+				"Show a vertical indicator line on the day/weekday ruler that follows your cursor position."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showRulerCursor ?? true)
+					.onChange(async (value) => {
+						this.plugin.settings.showRulerCursor = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
 			.setName("Show weekday in tooltip popups")
 			.setDesc(
 				"Include the day of the week in hover popup dates (e.g. \"(Monday) Nov 9, 2026\")."

@@ -35,6 +35,7 @@ export class HorizontalTimelineView {
 	private rulerEl: HTMLElement | null = null;
 	private monthsRowEl: HTMLElement | null = null;
 	private daysRowEl: HTMLElement | null = null;
+	private rulerCursorEl: HTMLElement | null = null;
 	private trackContentEl: HTMLElement | null = null;
 	private searchInputEl: HTMLInputElement | null = null;
 	private tooltipEl: HTMLElement | null = null;
@@ -66,6 +67,7 @@ export class HorizontalTimelineView {
 	private onWindowMouseUp: (() => void) | null = null;
 	private lastWheelZoomTime: number = 0;
 	private wheelZoomBurst: number = 0;
+	private lastCursorScreenX: number | null = null;
 
 	// Zoom hint UI
 	private zoomHintEl: HTMLElement | null = null;
@@ -121,6 +123,7 @@ export class HorizontalTimelineView {
 			this.rulerEl = this.timelineTrackEl.createDiv({ cls: "timeline-ruler" });
 			this.monthsRowEl = this.rulerEl.createDiv({ cls: "timeline-ruler-months" });
 			this.daysRowEl = this.rulerEl.createDiv({ cls: "timeline-ruler-days" });
+			this.rulerCursorEl = this.rulerEl.createDiv({ cls: "timeline-ruler-cursor" });
 			this.trackContentEl = this.timelineTrackEl.createDiv({ cls: "timeline-track-content" });
 			this.zoomHintEl = this.containerEl.createDiv({
 				cls: "timeline-zoom-hint",
@@ -527,6 +530,7 @@ export class HorizontalTimelineView {
 		}
 
 		this.renderVisibleRulerDays(true);
+		this.updateRulerCursorPosition();
 	}
 
 	private renderVisibleRulerDays(force: boolean = false) {
@@ -1534,6 +1538,10 @@ export class HorizontalTimelineView {
 		window.addEventListener("mouseup", this.onWindowMouseUp);
 
 		scrollWrapper.onmousemove = (e) => {
+			const rect = scrollWrapper.getBoundingClientRect();
+			this.lastCursorScreenX = e.clientX - rect.left;
+			this.updateRulerCursorPosition();
+
 			if (!this.isDragging) return;
 			e.preventDefault();
 
@@ -1550,12 +1558,21 @@ export class HorizontalTimelineView {
 			const x = e.pageX - scrollWrapper.offsetLeft;
 			const walk = (x - this.startX) * 1.3;
 			scrollWrapper.scrollLeft = this.scrollLeft - walk;
+			this.updateRulerCursorPosition();
+		};
+
+		scrollWrapper.onmouseleave = () => {
+			this.lastCursorScreenX = null;
+			if (this.rulerCursorEl) {
+				this.rulerCursorEl.removeClass("is-visible");
+			}
 		};
 
 		scrollWrapper.addEventListener(
 			"scroll",
 			() => {
 				this.renderVisibleRulerDays(false);
+				this.updateRulerCursorPosition();
 			},
 			{ passive: true }
 		);
@@ -1836,6 +1853,23 @@ export class HorizontalTimelineView {
 			left: days * this.pixelsPerDay,
 			behavior: "smooth",
 		});
+	}
+
+	private updateRulerCursorPosition() {
+		if (!this.rulerCursorEl || !this.scrollWrapperEl) {
+			return;
+		}
+		if (
+			!(this.settings.showRulerCursor ?? true) ||
+			this.lastCursorScreenX === null ||
+			this.pixelsPerDay < 30
+		) {
+			this.rulerCursorEl.removeClass("is-visible");
+			return;
+		}
+		const trackX = this.scrollWrapperEl.scrollLeft + this.lastCursorScreenX;
+		this.rulerCursorEl.style.transform = `translateX(${trackX}px)`;
+		this.rulerCursorEl.addClass("is-visible");
 	}
 
 	private showZoomHint() {
