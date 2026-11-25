@@ -75,6 +75,8 @@ export class HorizontalTimelineView {
 
 	// Active filter state
 	private activeHiddenCategoryIds: Set<string>;
+	private isDraggingCategoryPills: boolean = false;
+	private categoryDragHideState: boolean = false;
 
 	constructor(
 		app: App,
@@ -287,16 +289,35 @@ export class HorizontalTimelineView {
 
 			pill.createSpan({ text: cat.name, cls: "category-name" });
 
-			pill.onclick = () => {
-				if (this.activeHiddenCategoryIds.has(cat.id)) {
-					this.activeHiddenCategoryIds.delete(cat.id);
-				} else {
+			const setCategoryHidden = (shouldHide: boolean) => {
+				const currentlyHidden = this.activeHiddenCategoryIds.has(cat.id);
+				if (currentlyHidden === shouldHide) return;
+				if (shouldHide) {
 					this.activeHiddenCategoryIds.add(cat.id);
+				} else {
+					this.activeHiddenCategoryIds.delete(cat.id);
 				}
+				pill.toggleClass("is-hidden", shouldHide);
 				this.settings.hiddenCategoryIds = Array.from(this.activeHiddenCategoryIds);
 				this.onSettingsChange();
 				this.renderTrack();
-				this.updateToolbar();
+			};
+
+			pill.onmousedown = (e: MouseEvent) => {
+				if (e.button !== 0) return;
+				e.preventDefault();
+				this.isDraggingCategoryPills = true;
+				this.categoryDragHideState = !this.activeHiddenCategoryIds.has(cat.id);
+				setCategoryHidden(this.categoryDragHideState);
+			};
+
+			pill.onmouseenter = (e: MouseEvent) => {
+				if (!this.isDraggingCategoryPills) return;
+				if ((e.buttons & 1) === 0) {
+					this.isDraggingCategoryPills = false;
+					return;
+				}
+				setCategoryHidden(this.categoryDragHideState);
 			};
 		}
 
@@ -1512,6 +1533,7 @@ export class HorizontalTimelineView {
 			window.removeEventListener("mouseup", this.onWindowMouseUp);
 		}
 		this.onWindowMouseUp = () => {
+			this.isDraggingCategoryPills = false;
 			if (this.isDragging) {
 				this.isDragging = false;
 				scrollWrapper.removeClass("is-dragging");
