@@ -18,6 +18,7 @@ export interface TimelineEvent {
 	markerShape?: MarkerShape;
 	markerIcon?: string; // "dot" or any Lucide icon name
 	markerStyle?: MarkerStyle; // "filled" (category badge) | "outlined" (raw Lucide with bg knockout)
+	indicatorScale?: number; // relative per-category scale multiplier (default 1.0)
 	description: string;
 	imageUrl: string | null;
 	isRecurring?: boolean;
@@ -55,6 +56,7 @@ export interface CategoryConfig {
 	markerShape?: MarkerShape;
 	markerIcon?: string;
 	markerStyle?: MarkerStyle;
+	indicatorScale?: number;
 	enabled: boolean;
 	useAliasAsLabel?: boolean;
 	recurring?: boolean;
@@ -188,6 +190,9 @@ export function normalizeCategoryConfig(cat: CategoryConfig): CategoryConfig {
 	}
 	if (!cat.markerStyle) {
 		cat.markerStyle = "filled";
+	}
+	if (cat.indicatorScale === undefined) {
+		cat.indicatorScale = 1.0;
 	}
 	return cat;
 }

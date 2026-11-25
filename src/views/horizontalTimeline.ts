@@ -778,11 +778,14 @@ export class HorizontalTimelineView {
 			const contrastColor = getContrastingIconColor(ev.color);
 			const iconId = ev.markerIcon || "dot";
 			const markerStyle: MarkerStyle = ev.markerStyle || "filled";
+			const catScale = ev.indicatorScale ?? 1.0;
+			const effectiveIndicatorScale = indicatorScale * catScale;
 			const eventEl = stageEl.createDiv({
 				cls: `timeline-event-item ${ev.isRange ? "is-range" : "is-point"}`,
 			});
 			eventEl.style.setProperty("--event-color", ev.color);
 			eventEl.style.setProperty("--event-contrast", contrastColor);
+			eventEl.style.setProperty("--indicator-scale", String(effectiveIndicatorScale));
 
 			// 1. MARKER ON CENTRAL AXIS
 			if (ev.isRange) {
@@ -791,7 +794,8 @@ export class HorizontalTimelineView {
 				eventEl.style.width = `${widthPx}px`;
 
 				const bar = eventEl.createDiv({ cls: "timeline-event-bar" });
-				bar.style.height = `${barHeightPx}px`;
+				const effectiveBarHeightPx = Math.max(3, Math.round(barHeightPx * catScale));
+				bar.style.height = `${effectiveBarHeightPx}px`;
 				bar.style.backgroundColor = ev.color;
 
 				if (iconId !== "dot" || markerStyle === "outlined") {

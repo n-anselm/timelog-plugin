@@ -366,6 +366,7 @@ export class TimelineIndexer {
 		const markerShape = matchedCategory?.markerShape || "circle";
 		const markerIcon = matchedCategory?.markerIcon || "dot";
 		const baseMarkerStyle = matchedCategory?.markerStyle || "filled";
+		const categoryIndicatorScale = matchedCategory?.indicatorScale ?? 1.0;
 
 		// Recurring yearly generation
 		if (matchedCategory?.recurring) {
@@ -428,6 +429,7 @@ export class TimelineIndexer {
 					markerShape,
 					markerIcon,
 					markerStyle: effectiveStyle,
+					indicatorScale: categoryIndicatorScale,
 					description,
 					imageUrl,
 					isRecurring: true,
@@ -462,6 +464,7 @@ export class TimelineIndexer {
 				markerShape,
 				markerIcon,
 				markerStyle: baseMarkerStyle,
+				indicatorScale: categoryIndicatorScale,
 				description,
 				imageUrl,
 			},

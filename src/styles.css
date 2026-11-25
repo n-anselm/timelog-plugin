@@ -1177,6 +1177,25 @@
 	font-weight: 500;
 }
 
+.category-scale-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-top: 4px;
+}
+
+.category-scale-slider {
+	width: 140px;
+	cursor: pointer;
+}
+
+.category-scale-value {
+	font-size: 12px;
+	font-family: var(--font-monospace);
+	color: var(--text-muted);
+	min-width: 34px;
+}
+
 .category-checkbox-label {
 	display: inline-flex;
 	align-items: center;

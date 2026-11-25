@@ -747,6 +747,34 @@ export class TimelineSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				});
 
+				// Relative indicator scale slider
+				const scaleRow = shapeGroup.createDiv({ cls: "category-scale-row" });
+				scaleRow.createSpan({
+					cls: "category-custom-icon-label",
+					text: "Relative indicator scale:",
+				});
+				const currentScale = cat.indicatorScale ?? 1.0;
+				const scaleSlider = scaleRow.createEl("input", {
+					type: "range",
+					cls: "slider category-scale-slider",
+					attr: {
+						min: "0.5",
+						max: "2.5",
+						step: "0.1",
+					},
+				});
+				scaleSlider.value = String(currentScale);
+				const scaleValueSpan = scaleRow.createSpan({
+					cls: "category-scale-value",
+					text: `${currentScale.toFixed(1)}×`,
+				});
+				scaleSlider.oninput = async () => {
+					const val = parseFloat(scaleSlider.value) || 1.0;
+					cat.indicatorScale = val;
+					scaleValueSpan.setText(`${val.toFixed(1)}×`);
+					await this.plugin.saveSettings();
+				};
+
 				// Category options row (outlined icon style, alias label & recurring options)
 				const recurRow = body.createDiv({ cls: "category-recurring-row" });
 
