@@ -89,6 +89,7 @@ export interface TimelineSettings {
 	showToday: boolean;
 	showGrid: boolean;
 	showDayTicks: boolean;
+	showTooltipWeekday: boolean;
 	autoScrollToToday: boolean;
 	hiddenCategoryIds: string[];
 }
@@ -263,6 +264,7 @@ export const DEFAULT_SETTINGS: TimelineSettings = {
 	showToday: true,
 	showGrid: true,
 	showDayTicks: true,
+	showTooltipWeekday: true,
 	autoScrollToToday: true,
 	hiddenCategoryIds: [],
 };

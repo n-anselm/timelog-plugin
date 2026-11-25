@@ -375,6 +375,20 @@ export class TimelineSettingTab extends PluginSettingTab {
 					})
 			);
 
+		new Setting(containerEl)
+			.setName("Show weekday in tooltip popups")
+			.setDesc(
+				"Include the day of the week in hover popup dates (e.g. \"(Monday) Nov 9, 2026\")."
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showTooltipWeekday ?? true)
+					.onChange(async (value) => {
+						this.plugin.settings.showTooltipWeekday = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
 		// SECTION: CATEGORIES & CONDITIONS
 		containerEl.createEl("h3", { text: "Categories & Conditions" });
 		containerEl.createEl("p", {

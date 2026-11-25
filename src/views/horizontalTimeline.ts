@@ -969,7 +969,7 @@ export class HorizontalTimelineView {
 		window.addEventListener("keydown", this.onWindowKeyDown, true);
 	}
 
-	private formatDateForDisplay(dateStr: string): string {
+	private formatDateForDisplay(dateStr: string, includeYear: boolean = true): string {
 		if (!dateStr) return "";
 		const match = dateStr.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
 		if (!match) return dateStr;
@@ -982,9 +982,31 @@ export class HorizontalTimelineView {
 			"Jan", "Feb", "Mar", "Apr", "May", "Jun",
 			"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 		];
+		const weekdayNames = [
+			"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
+		];
 
+		const utcDate = new Date(Date.UTC(year, month, day));
+		const weekdayName = weekdayNames[utcDate.getUTCDay()] || "";
 		const monthName = monthNames[month] || "";
-		return `${monthName} ${day}, ${year}`;
+		const showWeekday = this.settings?.showTooltipWeekday ?? true;
+		const weekdayPrefix = showWeekday && weekdayName ? `(${weekdayName}) ` : "";
+
+		return includeYear
+			? `${weekdayPrefix}${monthName} ${day}, ${year}`
+			: `${weekdayPrefix}${monthName} ${day}`;
+	}
+
+	private formatEventDateDisplay(ev: TimelineEvent): string {
+		if (ev.isRange && ev.endDate) {
+			const startYear = ev.startDate.slice(0, 4);
+			const endYear = ev.endDate.slice(0, 4);
+			const sameYear = startYear === endYear;
+			const startFormatted = this.formatDateForDisplay(ev.startDate, !sameYear);
+			const endFormatted = this.formatDateForDisplay(ev.endDate, true);
+			return `${startFormatted} - ${endFormatted}`;
+		}
+		return this.formatDateForDisplay(ev.startDate, true);
 	}
 
 	private getRelativeTimeMessage(ev: TimelineEvent): string {
@@ -1080,13 +1102,7 @@ export class HorizontalTimelineView {
 		titleRow.createSpan({ text: ev.title });
 
 		const dateRow = this.tooltipEl.createDiv({ cls: "tooltip-date-row" });
-		const startFormatted = this.formatDateForDisplay(ev.startDate);
-		if (ev.isRange && ev.endDate) {
-			const endFormatted = this.formatDateForDisplay(ev.endDate);
-			dateRow.setText(`${startFormatted} → ${endFormatted}`);
-		} else {
-			dateRow.setText(startFormatted);
-		}
+		dateRow.setText(this.formatEventDateDisplay(ev));
 
 		// Relative Time Message (e.g. "In 5 days" or "3 years, 2 months ago")
 		const relativeTimeStr = this.getRelativeTimeMessage(ev);
@@ -1175,10 +1191,7 @@ export class HorizontalTimelineView {
 			}
 			titleSpan.createSpan({ text: ev.title });
 
-			const startFormatted = this.formatDateForDisplay(ev.startDate);
-			let dateStr = ev.isRange && ev.endDate 
-				? `${startFormatted} → ${this.formatDateForDisplay(ev.endDate)}` 
-				: startFormatted;
+			let dateStr = this.formatEventDateDisplay(ev);
 			if (ev.isRecurring && ev.occurrenceYears && ev.occurrenceYears > 0 && ev.originYear) {
 				const yrsLabel = ev.occurrenceYears === 1 ? "1 year" : `${ev.occurrenceYears} years`;
 				dateStr += ` · ${yrsLabel} (since ${ev.originYear})`;
