@@ -1025,7 +1025,11 @@ export class HorizontalTimelineView {
 		window.addEventListener("keydown", this.onWindowKeyDown, true);
 	}
 
-	private formatDateForDisplay(dateStr: string, includeYear: boolean = true): string {
+	private formatDateForDisplay(
+		dateStr: string,
+		includeYear: boolean = true,
+		forceHideWeekday: boolean = false
+	): string {
 		if (!dateStr) return "";
 		const match = dateStr.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
 		if (!match) return dateStr;
@@ -1045,7 +1049,7 @@ export class HorizontalTimelineView {
 		const utcDate = new Date(Date.UTC(year, month, day));
 		const weekdayName = weekdayNames[utcDate.getUTCDay()] || "";
 		const monthName = monthNames[month] || "";
-		const showWeekday = this.settings?.showTooltipWeekday ?? true;
+		const showWeekday = !forceHideWeekday && (this.settings?.showTooltipWeekday ?? true);
 		const weekdayPrefix = showWeekday && weekdayName ? `(${weekdayName}) ` : "";
 
 		return includeYear
@@ -1053,16 +1057,16 @@ export class HorizontalTimelineView {
 			: `${weekdayPrefix}${monthName} ${day}`;
 	}
 
-	private formatEventDateDisplay(ev: TimelineEvent): string {
+	private formatEventDateDisplay(ev: TimelineEvent, compact: boolean = false): string {
 		if (ev.isRange && ev.endDate) {
 			const startYear = ev.startDate.slice(0, 4);
 			const endYear = ev.endDate.slice(0, 4);
 			const sameYear = startYear === endYear;
-			const startFormatted = this.formatDateForDisplay(ev.startDate, !sameYear);
-			const endFormatted = this.formatDateForDisplay(ev.endDate, true);
+			const startFormatted = this.formatDateForDisplay(ev.startDate, !sameYear, compact);
+			const endFormatted = this.formatDateForDisplay(ev.endDate, true, compact);
 			return `${startFormatted} - ${endFormatted}`;
 		}
-		return this.formatDateForDisplay(ev.startDate, true);
+		return this.formatDateForDisplay(ev.startDate, true, compact);
 	}
 
 	private getRelativeTimeMessage(ev: TimelineEvent): string {
@@ -1330,11 +1334,7 @@ export class HorizontalTimelineView {
 			}
 			titleSpan.createSpan({ text: ev.title });
 
-			let dateStr = this.formatEventDateDisplay(ev);
-			if (ev.isRecurring && ev.occurrenceYears && ev.occurrenceYears > 0 && ev.originYear) {
-				const yrsLabel = ev.occurrenceYears === 1 ? "1 year" : `${ev.occurrenceYears} years`;
-				dateStr += ` · ${yrsLabel} (since ${ev.originYear})`;
-			}
+			const dateStr = this.formatEventDateDisplay(ev, true);
 			item.createSpan({ text: dateStr, cls: "tooltip-item-date" });
 
 			item.onmouseenter = (e) => {
