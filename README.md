@@ -1,6 +1,6 @@
 # Timelog — Obsidian Timeline Plugin
 
-A clean, responsive, and high-performance **Horizontal Timeline Plugin** for Obsidian (`v1.2.0`) that plots your notes and events along a single continuous axis.
+A clean, responsive, and high-performance **Horizontal Timeline Plugin** for Obsidian (`v1.3.0`) that plots your notes and events along a single continuous axis.
 
 > Full disclosure: this is a personal project created with AI (mostly OpenCode with Gemini 4 Argon). Use at your own risk.
 

@@ -1,6 +1,6 @@
 # Obsidian Timeline (Timelog) — Agent Handoff
 
-> **Last verified:** 2026-11-21 (v1.2.0 — source built & synced against `main.js` and `styles.css`)
+> **Last verified:** 2026-11-26 (v1.3.0 — source built & synced against `main.js` and `styles.css`)
 > **Status:** Working. Built, loaded in Obsidian, single horizontal view + codeblock embed.
 > **Purpose:** Everything an AI agent needs to continue this plugin without prior context.
 
@@ -14,7 +14,7 @@ This plugin shows notes that have dates in their frontmatter on one continuous h
 
 1. `src/*.ts` and `src/styles.css` — the truth.
 2. This file — verified notes and intent.
-3. `README.md` — user-facing overview (updated for `v1.2.0`).
+3. `README.md` — user-facing overview (updated for `v1.3.0`).
 
 **Never edit these by hand:**
 
@@ -29,7 +29,7 @@ This plugin shows notes that have dates in their frontmatter on one continuous h
 
 ---
 
-## 1. Current state (v1.2.0)
+## 1. Current state (v1.3.0)
 
 ### Implemented and working (main view & embedded view unless noted)
 
@@ -194,4 +194,4 @@ Stored in `data.json` at the plugin root (gitignored).
 - **Plugin:** `.obsidian/plugins/obsidian-timeline/`
 - **Event notes:** `Calendar/` by default (configurable; blank scans the whole vault)
 - **Related plugin:** Linear Calendar, sharing the `date` / `date-end` / `#event` convention
-- **Version:** `1.2.0`, `minAppVersion` `1.0.0`
+- **Version:** `1.3.0`, `minAppVersion` `1.0.0`

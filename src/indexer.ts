@@ -4,6 +4,7 @@ import {
 	FilterCondition,
 	TimelineEvent,
 	TimelineSettings,
+	extractCacheTags,
 	normalizeCategoryConfig,
 } from "./types";
 
@@ -65,51 +66,11 @@ export class TimelineIndexer {
 			return true;
 		}
 		const cache = this.app.metadataCache.getFileCache(file);
-		const tags = this.extractTags(cache);
+		const tags = extractCacheTags(cache);
 		const matchesAll = conditions.every((c) =>
 			this.evaluateCondition(file, cache?.frontmatter, tags, c)
 		);
 		return mode === "include" ? matchesAll : !matchesAll;
-	}
-
-	private extractTags(cache: any): string[] {
-		const tagsSet = new Set<string>();
-		const frontmatter = cache?.frontmatter;
-		if (frontmatter) {
-			if (Array.isArray(frontmatter.tags)) {
-				for (const t of frontmatter.tags) {
-					if (typeof t === "string") tagsSet.add(t.replace(/^#/, "").trim());
-				}
-			} else if (typeof frontmatter.tags === "string") {
-				frontmatter.tags
-					.split(/[,\s]+/)
-					.forEach((t: string) => {
-						const cl = t.replace(/^#/, "").trim();
-						if (cl) tagsSet.add(cl);
-					});
-			}
-
-			if (Array.isArray(frontmatter.tag)) {
-				for (const t of frontmatter.tag) {
-					if (typeof t === "string") tagsSet.add(t.replace(/^#/, "").trim());
-				}
-			} else if (typeof frontmatter.tag === "string") {
-				frontmatter.tag
-					.split(/[,\s]+/)
-					.forEach((t: string) => {
-						const cl = t.replace(/^#/, "").trim();
-						if (cl) tagsSet.add(cl);
-					});
-			}
-		}
-
-		if (cache?.tags) {
-			for (const t of cache.tags) {
-				tagsSet.add(t.tag.replace(/^#/, "").trim());
-			}
-		}
-
-		return Array.from(tagsSet);
 	}
 
 	public evaluateCondition(
@@ -302,7 +263,7 @@ export class TimelineIndexer {
 		}
 
 		// Collect tags
-		const tags = this.extractTags(cache);
+		const tags = extractCacheTags(cache);
 
 		// Determine category and color (first enabled matching category wins)
 		let matchedCategory: CategoryConfig | null = null;
@@ -363,7 +324,6 @@ export class TimelineIndexer {
 		const diffInitial = Boolean(matchedCategory?.recurring && matchedCategory?.differentiateInitial);
 		const bdaySuffix = baseTitle.endsWith("s") || baseTitle.endsWith("S") ? "' birthday" : "'s birthday";
 
-		const markerShape = matchedCategory?.markerShape || "circle";
 		const markerIcon = matchedCategory?.markerIcon || "dot";
 		const baseMarkerStyle = matchedCategory?.markerStyle || "filled";
 		const categoryIndicatorScale = matchedCategory?.indicatorScale ?? 1.0;
@@ -426,7 +386,6 @@ export class TimelineIndexer {
 					categoryId: matchedCategory.id,
 					categoryName: matchedCategory.name,
 					color,
-					markerShape,
 					markerIcon,
 					markerStyle: effectiveStyle,
 					indicatorScale: categoryIndicatorScale,
@@ -461,7 +420,6 @@ export class TimelineIndexer {
 				categoryId: matchedCategory?.id || null,
 				categoryName: matchedCategory?.name || null,
 				color,
-				markerShape,
 				markerIcon,
 				markerStyle: baseMarkerStyle,
 				indicatorScale: categoryIndicatorScale,

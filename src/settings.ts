@@ -5,8 +5,10 @@ import {
 	ConditionOperator,
 	FilterCondition,
 	MarkerStyle,
+	extractCacheTags,
 	getContrastingIconColor,
 	normalizeCategoryConfig,
+	resolveColorToHex,
 } from "./types";
 
 const BUILTIN_PROPERTIES = [
@@ -1141,55 +1143,14 @@ export class TimelineSettingTab extends PluginSettingTab {
 		const files = this.app.vault.getMarkdownFiles();
 		for (const file of files) {
 			const cache = this.app.metadataCache.getFileCache(file);
-			const fmTags = cache?.frontmatter?.tags ?? cache?.frontmatter?.tag;
-			if (Array.isArray(fmTags)) {
-				for (const t of fmTags) {
-					const clean = String(t).replace(/^#/, "").trim();
-					if (clean) tags.add(clean);
-				}
-			} else if (typeof fmTags === "string") {
-				for (const part of fmTags.split(/[,\s]+/)) {
-					const clean = part.replace(/^#/, "").trim();
-					if (clean) tags.add(clean);
-				}
-			}
-			if (cache?.tags) {
-				for (const t of cache.tags) {
-					const clean = t.tag.replace(/^#/, "").trim();
-					if (clean) tags.add(clean);
-				}
+			for (const t of extractCacheTags(cache)) {
+				tags.add(t);
 			}
 		}
 		return Array.from(tags).sort();
 	}
 
 	private resolveHexForPicker(color: string): string {
-		const trimmed = (color || "").trim();
-		if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) {
-			return trimmed;
-		}
-		if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) {
-			return (
-				"#" +
-				trimmed[1] +
-				trimmed[1] +
-				trimmed[2] +
-				trimmed[2] +
-				trimmed[3] +
-				trimmed[3]
-			);
-		}
-		const probe = document.createElement("div");
-		probe.style.display = "none";
-		probe.style.color = trimmed || "var(--interactive-accent)";
-		document.body.appendChild(probe);
-		const computed = getComputedStyle(probe).color;
-		probe.remove();
-		const m = computed.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-		if (m) {
-			const hex = (n: string) => parseInt(n, 10).toString(16).padStart(2, "0");
-			return `#${hex(m[1])}${hex(m[2])}${hex(m[3])}`;
-		}
-		return "#6c849d";
+		return resolveColorToHex(color);
 	}
 }

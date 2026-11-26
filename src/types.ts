@@ -15,7 +15,6 @@ export interface TimelineEvent {
 	categoryId: string | null;
 	categoryName: string | null;
 	color: string;
-	markerShape?: MarkerShape;
 	markerIcon?: string; // "dot" or any Lucide icon name
 	markerStyle?: MarkerStyle; // "filled" (category badge) | "outlined" (raw Lucide with bg knockout)
 	indicatorScale?: number; // relative per-category scale multiplier (default 1.0)
@@ -179,9 +178,6 @@ export function normalizeCategoryConfig(cat: CategoryConfig): CategoryConfig {
 	if (cat.differentiateInitial === undefined) {
 		cat.differentiateInitial = false;
 	}
-	if (!cat.markerShape) {
-		cat.markerShape = "circle";
-	}
 	if (!cat.markerIcon) {
 		if (cat.markerShape === "diamond") cat.markerIcon = "diamond";
 		else if (cat.markerShape === "star") cat.markerIcon = "star";
@@ -197,40 +193,89 @@ export function normalizeCategoryConfig(cat: CategoryConfig): CategoryConfig {
 	return cat;
 }
 
+export function extractCacheTags(cache: any): string[] {
+	const tagsSet = new Set<string>();
+	const addRaw = (raw: any) => {
+		if (Array.isArray(raw)) {
+			for (const t of raw) {
+				if (t != null) {
+					const clean = String(t).replace(/^#/, "").trim();
+					if (clean) tagsSet.add(clean);
+				}
+			}
+		} else if (typeof raw === "string") {
+			for (const part of raw.split(/[,\s]+/)) {
+				const clean = part.replace(/^#/, "").trim();
+				if (clean) tagsSet.add(clean);
+			}
+		}
+	};
+	addRaw(cache?.frontmatter?.tags);
+	addRaw(cache?.frontmatter?.tag);
+	if (cache?.tags) {
+		for (const t of cache.tags) {
+			const clean = String(t.tag || "").replace(/^#/, "").trim();
+			if (clean) tagsSet.add(clean);
+		}
+	}
+	return Array.from(tagsSet);
+}
+
+const resolvedHexCache = new Map<string, string>();
 const contrastCache = new Map<string, string>();
 
-export function getContrastingIconColor(color: string): string {
-	const key = (color || "").trim();
-	const cached = contrastCache.get(key);
+export function resolveColorToHex(color: string): string {
+	const trimmed = (color || "").trim();
+	if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) {
+		return trimmed.toLowerCase();
+	}
+	if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) {
+		return (
+			"#" +
+			trimmed[1] +
+			trimmed[1] +
+			trimmed[2] +
+			trimmed[2] +
+			trimmed[3] +
+			trimmed[3]
+		).toLowerCase();
+	}
+
+	const themeKey =
+		typeof document !== "undefined" && document.body?.classList.contains("theme-light")
+			? "light"
+			: "dark";
+	const cacheKey = `${trimmed || "var(--interactive-accent)"}|${themeKey}`;
+	const cached = resolvedHexCache.get(cacheKey);
 	if (cached) return cached;
 
-	let r = 59,
-		g = 130,
-		b = 246;
-	const hex6 = key.match(/^#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})$/);
-	const hex3 = key.match(/^#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])$/);
-	if (hex6) {
-		r = parseInt(hex6[1], 16);
-		g = parseInt(hex6[2], 16);
-		b = parseInt(hex6[3], 16);
-	} else if (hex3) {
-		r = parseInt(hex3[1] + hex3[1], 16);
-		g = parseInt(hex3[2] + hex3[2], 16);
-		b = parseInt(hex3[3] + hex3[3], 16);
-	} else if (typeof document !== "undefined") {
+	let hexResult = "#6c849d";
+	if (typeof document !== "undefined" && document.body) {
 		const probe = document.createElement("div");
 		probe.style.display = "none";
-		probe.style.color = key || "var(--interactive-accent)";
+		probe.style.color = trimmed || "var(--interactive-accent)";
 		document.body.appendChild(probe);
 		const computed = getComputedStyle(probe).color;
 		probe.remove();
 		const m = computed.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
 		if (m) {
-			r = parseInt(m[1], 10);
-			g = parseInt(m[2], 10);
-			b = parseInt(m[3], 10);
+			const toHex = (n: string) => parseInt(n, 10).toString(16).padStart(2, "0");
+			hexResult = `#${toHex(m[1])}${toHex(m[2])}${toHex(m[3])}`;
 		}
 	}
+
+	resolvedHexCache.set(cacheKey, hexResult);
+	return hexResult;
+}
+
+export function getContrastingIconColor(color: string): string {
+	const hex = resolveColorToHex(color);
+	const cached = contrastCache.get(hex);
+	if (cached) return cached;
+
+	const r = parseInt(hex.slice(1, 3), 16);
+	const g = parseInt(hex.slice(3, 5), 16);
+	const b = parseInt(hex.slice(5, 7), 16);
 
 	// Relative luminance (sRGB)
 	const toLinear = (c: number) => {
@@ -239,9 +284,7 @@ export function getContrastingIconColor(color: string): string {
 	};
 	const lum = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
 	const result = lum > 0.42 ? "#111111" : "#ffffff";
-	if (!key.startsWith("var(")) {
-		contrastCache.set(key, result);
-	}
+	contrastCache.set(hex, result);
 	return result;
 }
 
