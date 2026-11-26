@@ -483,24 +483,26 @@ export class HorizontalTimelineView {
 				mEl.style.width = `${currentMonthDaysCount * this.pixelsPerDay}px`;
 
 				// Adaptive month header depending on zoom
-				let labelText = "";
 				if (hideMonthlyDividers) {
-					labelText = String(currentMonthYear);
-				} else if (this.pixelsPerDay >= 35) {
-					labelText = `${monthNamesFull[currentMonth]} ${currentMonthYear}`;
-				} else if (this.pixelsPerDay >= 12) {
-					labelText = `${monthNamesShort[currentMonth]} '${String(currentMonthYear).slice(2)}`;
-				} else if (this.pixelsPerDay >= 5) {
-					labelText = currentMonth === 0 ? String(currentMonthYear) : monthNamesShort[currentMonth];
-				} else {
-					// Ultra-zoomed out (< 5px/day): only show Year labels at the start of each year
-					labelText = currentMonth === 0 ? String(currentMonthYear) : "";
-				}
-
-				if (labelText) {
 					mEl.createSpan({
-						text: labelText,
+						text: String(currentMonthYear),
+						cls: "timeline-month-label timeline-year-label",
+					});
+				} else if (this.pixelsPerDay >= 12) {
+					mEl.createSpan({
+						text: `${monthNamesFull[currentMonth]} ${currentMonthYear}`,
 						cls: "timeline-month-label",
+					});
+				} else if (this.pixelsPerDay >= 5) {
+					mEl.createSpan({
+						text: currentMonth === 0 ? String(currentMonthYear) : monthNamesShort[currentMonth],
+						cls: `timeline-month-label ${currentMonth === 0 ? "timeline-year-label" : ""}`,
+					});
+				} else if (currentMonth === 0) {
+					// Ultra-zoomed out (< 5px/day): only show Year labels at the start of each year
+					mEl.createSpan({
+						text: String(currentMonthYear),
+						cls: "timeline-month-label timeline-year-label",
 					});
 				}
 			}

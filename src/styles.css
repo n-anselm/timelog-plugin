@@ -263,6 +263,11 @@
 	white-space: nowrap;
 }
 
+.timeline-year-label {
+	font-weight: 800;
+	color: var(--text-accent);
+}
+
 .timeline-ruler-days {
 	position: relative;
 	height: 48px;

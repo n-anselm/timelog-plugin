@@ -351,7 +351,7 @@ export class TimelineSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Show time grid")
-			.setDesc("Show subtle vertical grid lines for weeks and days.")
+			.setDesc("Show subtle vertical grid lines for weeks.")
 			.addToggle((toggle) =>
 				toggle
 					.setValue(this.plugin.settings.showGrid)
