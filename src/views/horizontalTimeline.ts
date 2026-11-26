@@ -46,6 +46,7 @@ export class HorizontalTimelineView {
 	private subTooltipFadeTimer: number | null = null;
 	private lightboxEl: HTMLElement | null = null;
 	private lightboxFadeTimer: number | null = null;
+	private initialScrollTimer: number | null = null;
 	private onWindowKeyDown: ((e: KeyboardEvent) => void) | null = null;
 	private zoomRafId: number | null = null;
 	private pendingZoom: { newPx: number; cursorScreenX: number; targetDay: number } | null = null;
@@ -159,9 +160,16 @@ export class HorizontalTimelineView {
 		if (this.isInitialRender || spanChanged) {
 			this.isInitialRender = false;
 			if (this.settings.autoScrollToToday) {
-				setTimeout(() => {
-					this.pixelsPerDay = this.computeDefaultZoomPixelsPerDay();
-					this.renderTrack();
+				if (this.initialScrollTimer !== null) {
+					window.clearTimeout(this.initialScrollTimer);
+				}
+				this.initialScrollTimer = window.setTimeout(() => {
+					this.initialScrollTimer = null;
+					const nextPx = this.computeDefaultZoomPixelsPerDay();
+					if (nextPx !== this.pixelsPerDay) {
+						this.pixelsPerDay = nextPx;
+						this.renderTrack();
+					}
 					this.scrollToDefaultView(false);
 				}, 50);
 			}
@@ -215,7 +223,7 @@ export class HorizontalTimelineView {
 		this.maxTimestamp = Date.UTC(maxYear, 11, 31, 23, 59, 59);
 
 		const dayMs = 86400000;
-		this.totalDays = Math.ceil((this.maxTimestamp - this.minTimestamp) / dayMs) + 1;
+		this.totalDays = Math.ceil((this.maxTimestamp - this.minTimestamp) / dayMs);
 	}
 
 	private updateToolbar() {
@@ -466,86 +474,66 @@ export class HorizontalTimelineView {
 		// Hide monthly dividers once a full year (365 days) is half the viewport width or narrower
 		const hideMonthlyDividers = 365 * this.pixelsPerDay <= viewWidth * 0.5;
 
-		let currentMonth = -1;
-		let currentMonthYear = -1;
-		let currentMonthStartDay = 0;
-		let currentMonthDaysCount = 0;
+		const startDate = new Date(this.minTimestamp);
+		const endDate = new Date(this.maxTimestamp);
+		const minYear = startDate.getUTCFullYear();
+		const maxYear = endDate.getUTCFullYear();
+		const startDayOfWeek = startDate.getUTCDay();
+		const firstMondayIndex = (8 - startDayOfWeek) % 7;
 
-		const flushMonth = () => {
-			if (currentMonth !== -1 && currentMonthDaysCount > 0) {
-				if (hideMonthlyDividers && currentMonth !== 0) {
-					return;
+		let dayOffset = 0;
+		for (let year = minYear; year <= maxYear; year++) {
+			for (let month = 0; month < 12; month++) {
+				const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+				const monthStartDay = dayOffset;
+				dayOffset += daysInMonth;
+
+				if (!hideMonthlyDividers || month === 0) {
+					const mEl = monthsRow.createDiv({
+						cls: `timeline-month-block ${hideMonthlyDividers ? "is-year-block" : ""}`,
+					});
+					mEl.style.left = `${monthStartDay * this.pixelsPerDay}px`;
+					mEl.style.width = `${daysInMonth * this.pixelsPerDay}px`;
+
+					// Adaptive month header depending on zoom
+					if (hideMonthlyDividers) {
+						mEl.createSpan({
+							text: String(year),
+							cls: "timeline-month-label timeline-year-label",
+						});
+					} else if (this.pixelsPerDay >= 12) {
+						mEl.createSpan({
+							text: `${monthNamesFull[month]} ${year}`,
+							cls: "timeline-month-label",
+						});
+					} else if (this.pixelsPerDay >= 5) {
+						mEl.createSpan({
+							text: month === 0 ? String(year) : monthNamesShort[month],
+							cls: `timeline-month-label ${month === 0 ? "timeline-year-label" : ""}`,
+						});
+					} else if (month === 0) {
+						// Ultra-zoomed out (< 5px/day): only show Year labels at the start of each year
+						mEl.createSpan({
+							text: String(year),
+							cls: "timeline-month-label timeline-year-label",
+						});
+					}
 				}
-				const mEl = monthsRow.createDiv({
-					cls: `timeline-month-block ${hideMonthlyDividers ? "is-year-block" : ""}`,
-				});
-				mEl.style.left = `${currentMonthStartDay * this.pixelsPerDay}px`;
-				mEl.style.width = `${currentMonthDaysCount * this.pixelsPerDay}px`;
 
-				// Adaptive month header depending on zoom
-				if (hideMonthlyDividers) {
-					mEl.createSpan({
-						text: String(currentMonthYear),
-						cls: "timeline-month-label timeline-year-label",
-					});
-				} else if (this.pixelsPerDay >= 12) {
-					mEl.createSpan({
-						text: `${monthNamesFull[currentMonth]} ${currentMonthYear}`,
-						cls: "timeline-month-label",
-					});
-				} else if (this.pixelsPerDay >= 5) {
-					mEl.createSpan({
-						text: currentMonth === 0 ? String(currentMonthYear) : monthNamesShort[currentMonth],
-						cls: `timeline-month-label ${currentMonth === 0 ? "timeline-year-label" : ""}`,
-					});
-				} else if (currentMonth === 0) {
-					// Ultra-zoomed out (< 5px/day): only show Year labels at the start of each year
-					mEl.createSpan({
-						text: String(currentMonthYear),
-						cls: "timeline-month-label timeline-year-label",
-					});
+				// Grid lines when zoomed out (< 15px/day): monthly above the year-half-screen breakpoint, yearly at/below it
+				if (
+					this.settings.showGrid &&
+					this.pixelsPerDay < 15 &&
+					(!hideMonthlyDividers || month === 0)
+				) {
+					const gridLine = trackEl.createDiv({ cls: "timeline-grid-line is-month-start" });
+					gridLine.style.left = `${monthStartDay * this.pixelsPerDay}px`;
 				}
-			}
-		};
-
-		let firstMondayIndex = -1;
-		for (let i = 0; i < this.totalDays; i++) {
-			const date = new Date(this.minTimestamp + i * dayMs);
-			const month = date.getUTCMonth();
-			const year = date.getUTCFullYear();
-			const dayOfMonth = date.getUTCDate();
-			const dayOfWeek = date.getUTCDay();
-
-			if (firstMondayIndex === -1 && dayOfWeek === 1) {
-				firstMondayIndex = i;
-			}
-
-			if (month !== currentMonth || year !== currentMonthYear) {
-				flushMonth();
-				currentMonth = month;
-				currentMonthYear = year;
-				currentMonthStartDay = i;
-				currentMonthDaysCount = 1;
-			} else {
-				currentMonthDaysCount++;
-			}
-
-			// Grid lines when zoomed out (< 15px/day): monthly above the year-half-screen breakpoint, yearly at/below it
-			if (
-				this.settings.showGrid &&
-				this.pixelsPerDay < 15 &&
-				dayOfMonth === 1 &&
-				(!hideMonthlyDividers || month === 0)
-			) {
-				const gridLine = trackEl.createDiv({ cls: "timeline-grid-line is-month-start" });
-				gridLine.style.left = `${i * this.pixelsPerDay}px`;
 			}
 		}
 
-		flushMonth();
-
 		// Weekly Monday grid lines (>= 15px/day) via a single CSS repeating background instead of hundreds of DOM nodes
-		if (this.settings.showGrid && this.pixelsPerDay >= 15 && firstMondayIndex >= 0) {
+		if (this.settings.showGrid && this.pixelsPerDay >= 15 && firstMondayIndex < this.totalDays) {
 			const weekGrid = trackEl.createDiv({ cls: "timeline-week-grid-layer" });
 			const weekPx = 7 * this.pixelsPerDay;
 			weekGrid.style.backgroundSize = `${weekPx}px 100%`;
@@ -1923,6 +1911,12 @@ export class HorizontalTimelineView {
 
 	public destroy() {
 		this.cancelHideTooltip();
+		this.cancelHideSubTooltip();
+		this.hideZoomHint();
+		if (this.initialScrollTimer !== null) {
+			window.clearTimeout(this.initialScrollTimer);
+			this.initialScrollTimer = null;
+		}
 		if (this.lightboxFadeTimer !== null) {
 			window.clearTimeout(this.lightboxFadeTimer);
 			this.lightboxFadeTimer = null;
